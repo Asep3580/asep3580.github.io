@@ -139,18 +139,15 @@
 
     </style>
 </head>
-<body oncontextmenu="return myFunction()">
+    <body oncontextmenu="return myFunction()"> class="bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased">
 
 <script>
 function myFunction() {
   alert("Menu konteks dinonaktifkan pada halaman ini!");
   return false; // Mencegah menu konteks bawaan browser muncul
 }
-</script>
-
-</body>
-    <body class="bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased">
-
+</script> 
+    
     <!-- Toast Notification Container -->
     <div id="toast-notification" class="fixed top-5 right-5 bg-green-600 text-white py-3 px-6 rounded-lg shadow-xl opacity-0 transform translate-y-[-20px] z-[100]">
         <p id="toast-message">Aksi berhasil!</p>
