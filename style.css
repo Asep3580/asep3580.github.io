@@ -1,0 +1,113 @@
+/* CSS Variables for Theming */
+:root, [data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-hover: #f8fafc;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+}
+[data-theme="dark-blue"] {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --bg-tertiary: #374151;
+    --bg-hover: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+}
+[data-theme="forest-green"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-hover: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+    --accent: #22c55e;
+    --accent-hover: #16a34a;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* Active nav link style */
+.nav-link.active { background-color: var(--accent); color: white; }
+.nav-link.active i { color: white; }
+
+/* Toast Notification */
+#toast-notification {
+    transition: opacity 0.5s, transform 0.5s;
+}
+
+/* Modal transitions */
+.modal {
+    transition: opacity 0.3s ease-in-out;
+}
+.modal-content {
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Settings Tabs */
+.tab-button {
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+.tab-button:hover {
+    color: var(--text-primary);
+}
+.tab-button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Simple animation for AI summary */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* FullCalendar Customizations */
+.fc {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+.fc .fc-toolbar-title { color: var(--text-primary); }
+.fc .fc-button { 
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active, 
+.fc .fc-button-primary:not(:disabled):active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+.fc .fc-daygrid-day.fc-day-today { background-color: var(--accent-hover); opacity: 0.2; }
+.fc-col-header-cell { background-color: var(--bg-tertiary); }
+.fc-event { border-radius: 4px; padding: 2px 4px; font-size: 0.8em; }
+.fc-event-tentative {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--accent),
+        var(--accent) 10px,
+        var(--accent-hover) 10px,
+        var(--accent-hover) 20px
+        ) !important;
+    }
