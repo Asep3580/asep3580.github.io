@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
             "rose": { name: "Rose Ballroom (100 pax)", rentalPrice: 5000000 }
         },
         users: [ 
-            { id: 1, name: 'Siti Saleha', email: 'siti@hotel.com', role: 'Sales', password: 'password123' },
-            { id: 2, name: 'Admin Hotel', email: 'admin@hotel.com', role: 'Admin', password: 'password123' },
+            { id: 1, name: 'Siti Saleha', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
+            { id: 2, name: 'Admin Hotel', email: 'gm@hotel.com', role: 'Admin', password: 'password123' },
             { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
