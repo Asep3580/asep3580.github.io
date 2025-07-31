@@ -1,0 +1,10 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyCvkTIcoypaOaJivSTA8uViaiTCkHs0YKw",
+  authDomain: "crm-hotel-f232e.firebaseapp.com",
+  databaseURL: "https://crm-hotel-f232e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "crm-hotel-f232e",
+  storageBucket: "crm-hotel-f232e.firebasestorage.app",
+  messagingSenderId: "841840943858",
+  appId: "1:841840943858:web:ffda7096bc06daefaca66b",
+  measurementId: "G-7KC312XT0H"
+};

@@ -1,3 +1,26 @@
+// === Firebase Configuration ===
+const firebaseConfig = {
+  apiKey: "AIzaSyCvkTIcoypaOaJivSTA8uViaiTCkHs0YKw",
+  authDomain: "crm-hotel-f232e.firebaseapp.com",
+  databaseURL: "https://crm-hotel-f232e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "crm-hotel-f232e",
+  storageBucket: "crm-hotel-f232e.firebasestorage.app",
+  messagingSenderId: "841840943858",
+  appId: "1:841840943858:web:ffda7096bc06daefaca66b",
+  measurementId: "G-7KC312XT0H"
+};
+
+// Inisialisasi Firebase
+firebase.initializeApp(firebaseConfig);
+console.log("✅ Firebase initialized");
+
+const firestore = firebase.firestore();
+
+firestore.collection("pelanggan").limit(1).get()
+  .then(() => console.log("✅ Firestore connected"))
+  .catch((err) => console.error("❌ Firestore not connected", err));
+
+
 document.addEventListener('DOMContentLoaded', function() {
     // --- GLOBAL STATE & DATABASE ---
     let db = {};
@@ -1711,29 +1734,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Form Submissions
         document.getElementById('formTambahPelanggan').addEventListener('submit', function(e) { 
-            e.preventDefault(); 
-            const id = parseInt(document.getElementById('pelanggan-id').value);
-            const pelangganData = { 
-                nama: document.getElementById('pelanggan-nama').value, 
-                perusahaan: document.getElementById('pelanggan-perusahaan').value || '-', 
-                email: document.getElementById('pelanggan-email').value, 
-                telepon: document.getElementById('pelanggan-telepon').value, 
-                alamat: document.getElementById('pelanggan-alamat').value, 
-                segmentasi: document.getElementById('pelanggan-segmentasi').value 
-            };
-            if (id) {
-                const index = db.pelanggan.findIndex(p => p.id === id);
-                db.pelanggan[index] = { ...db.pelanggan[index], ...pelangganData };
-            } else {
-                pelangganData.id = Date.now();
-                db.pelanggan.push(pelangganData);
-            }
-            saveData(); 
-            renderAll(); 
-            closeModal('pelangganModal'); 
-            showToast(`Pelanggan berhasil ${id ? 'diperbarui' : 'ditambahkan'}!`); 
-            this.reset(); 
-        });
+    e.preventDefault(); 
+
+    const id = parseInt(document.getElementById('pelanggan-id').value);
+    const pelangganData = { 
+        nama: document.getElementById('pelanggan-nama').value, 
+        perusahaan: document.getElementById('pelanggan-perusahaan').value || '-', 
+        email: document.getElementById('pelanggan-email').value, 
+        telepon: document.getElementById('pelanggan-telepon').value, 
+        alamat: document.getElementById('pelanggan-alamat').value, 
+        segmentasi: document.getElementById('pelanggan-segmentasi').value 
+    };
+
+    if (id) {
+        const index = db.pelanggan.findIndex(p => p.id === id);
+        db.pelanggan[index] = { ...db.pelanggan[index], ...pelangganData };
+    } else {
+        pelangganData.id = Date.now();
+        db.pelanggan.push(pelangganData);
+
+        // ✅ Simpan ke Firestore hanya untuk data baru
+        simpanPelangganKeFirestore(pelangganData);
+    }
+
+    saveData(); 
+    renderAll(); 
+    closeModal('pelangganModal'); 
+    showToast(`Pelanggan berhasil ${id ? 'diperbarui' : 'ditambahkan'}!`); 
+    this.reset(); 
+});
+
 
         document.getElementById('formPembayaran').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -2364,3 +2394,16 @@ document.addEventListener('DOMContentLoaded', function() {
         loadTheme();
         checkSession();
     });
+
+
+async function simpanPelangganKeFirestore(pelanggan) {
+  console.log("📦 Menyimpan pelanggan ke Firestore:", pelanggan);
+  try {
+    const ref = await firestore.collection("pelanggan").add(pelanggan);
+    console.log("✅ Pelanggan berhasil disimpan dengan ID:", ref.id);
+  } catch (error) {
+    console.error("❌ Gagal simpan ke Firestore:", error);
+  }
+}
+
+
