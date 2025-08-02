@@ -57,8 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         users: [ 
             { id: 1, name: 'Siti Saleha', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
-            { id: 2, name: 'Admin Hotel', email: 'gm@hotel.com', role: 'Admin', password: 'password123' },
-            { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
+            { id: 2, name: 'Admin Hotel', email: 'gm@hotel.com', role: 'Manager', password: 'password123' },
+            { id: 3, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: 'devpassword' }
+            { id: 4, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
             "2025-07": {
@@ -3784,3 +3785,4 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('contextmenu', event => event.preventDefault());
 
     });
+
