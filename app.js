@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
         users: [ 
             { id: 1, name: 'Sales Hotel', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
             { id: 2, name: 'GM Hotel', email: 'gm@hotel.com', role: 'Manager', password: 'password123' },
-            { id: 4, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: 'devpassword' },
+            { id: 4, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: 'password123' },
             { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
@@ -3785,3 +3785,4 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('contextmenu', event => event.preventDefault());
 
     });
+
