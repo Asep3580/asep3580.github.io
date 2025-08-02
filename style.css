@@ -113,3 +113,10 @@
         var(--accent-hover) 20px
     ) !important;
 }
+
+/* Disable text selection for copy protection */
+body {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none; /* Standard syntax */
+}

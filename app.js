@@ -3767,4 +3767,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePageTitle(db.settings.companyProfile.name);
         initTargetPage();
         checkSession();
+
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
     });
