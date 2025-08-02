@@ -1133,12 +1133,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Page Access Section
             html += `<p class="text-sm font-semibold text-[var(--text-secondary)] mb-2">Akses Halaman</p>
-                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 border-b border-[var(--border-color)] pb-4">`;
+                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-3 mb-4 border-b border-[var(--border-color)] pb-4">`;
             for (const page in permissions[role]) {
                 if (page.startsWith('can_')) continue; // Skip action permissions
                 const isChecked = permissions[role][page];
                 const isDisabled = role === 'Admin' ? 'disabled' : '';
-                html += `<label class="flex items-center space-x-3">
+                html += `<label class="flex items-center space-x-2">
                             <input type="checkbox" data-role="${role}" data-page="${page}" ${isChecked ? 'checked' : ''} ${isDisabled}
                                 class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
                             <span class="text-sm text-[var(--text-primary)]">${pageNames[page] || page}</span>
@@ -1148,12 +1148,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Action Permissions Section
             html += `<p class="text-sm font-semibold text-[var(--text-secondary)] mb-2">Hak Aksi Spesifik</p>
-                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">`;
+                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-3">`;
             for (const page in permissions[role]) {
                 if (!page.startsWith('can_')) continue; // Only show action permissions
                 const isChecked = permissions[role][page];
                 const isDisabled = role === 'Admin' ? 'disabled' : '';
-                html += `<label class="flex items-center space-x-3">
+                html += `<label class="flex items-center space-x-2">
                             <input type="checkbox" data-role="${role}" data-page="${page}" ${isChecked ? 'checked' : ''} ${isDisabled}
                                 class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
                             <span class="text-sm text-[var(--text-primary)]">${pageNames[page] || page}</span>
@@ -3271,6 +3271,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelectorAll('.settings-tab-button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
                 document.querySelectorAll('#manajemen-pengaturan .tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(button.dataset.target).classList.remove('hidden');
+            });
+        });
+
+        // User Management Tab Listener
+        document.querySelectorAll('.user-tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.user-tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                document.querySelectorAll('#manajemen-user .user-tab-content').forEach(content => {
                     content.classList.add('hidden');
                 });
                 document.getElementById(button.dataset.target).classList.remove('hidden');

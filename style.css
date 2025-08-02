@@ -45,18 +45,22 @@
 
 /* Settings Tabs */
 .tab-button {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem; /* py-2 px-4 */
     border-bottom: 2px solid transparent;
     font-weight: 600;
     color: var(--text-secondary);
     transition: all 0.2s;
+    border-radius: 0.5rem 0.5rem 0 0; /* rounded-t-lg */
+    margin-bottom: -2px; /* Pulls the tab down to merge with the border */
 }
 .tab-button:hover {
     color: var(--text-primary);
+    background-color: var(--bg-tertiary);
 }
 .tab-button.active {
     border-color: var(--accent);
     color: var(--accent);
+    background-color: var(--bg-secondary); /* Match content background */
 }
 
 /* Simple animation for AI summary */

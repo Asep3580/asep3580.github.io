@@ -79,7 +79,9 @@
         <!-- Sidebar Navigation -->
         <aside id="sidebar" class="bg-[var(--bg-secondary)] text-[var(--text-primary)] w-64 fixed inset-y-0 left-0 transform -translate-x-full lg:h-screen lg:sticky lg:top-0 lg:translate-x-0 transition-transform duration-300 ease-in-out z-30 flex flex-col">
             <div class="p-5 border-b border-[var(--border-color)] flex items-center space-x-4">
-                <img id="sidebar-logo" src="assets/logo.png" alt="Logo Hotel" class="h-15 w-auto">
+                <img id="sidebar-logo" src="assets/logo.png" alt="Logo Hotel" class="h-13
+
+                 w-auto">
             </div>
             <nav class="p-4 flex-1 overflow-y-auto">
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200 active" data-target="dashboard">
@@ -420,12 +422,35 @@
                 <!-- Manajemen User Content -->
                 <div id="manajemen-user" class="content-section hidden">
                     <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold">Manajemen User</h3>
-                            <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center" onclick="openUserModal()"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah User</button>
+                        <h3 class="text-lg font-semibold mb-4">Manajemen User & Role</h3>
+                        <!-- Tabs -->
+                        <div class="border-b border-[var(--border-color)]">
+                            <nav class="flex space-x-2" aria-label="Tabs">
+                                <button class="user-tab-button tab-button active" data-target="tab-daftar-user">Daftar User</button>
+                                <button class="user-tab-button tab-button" data-target="tab-pengaturan-role">Pengaturan Role</button>
+                            </nav>
                         </div>
-                        <div id="user-table-container" class="overflow-x-auto">
-                           <!-- User table will be rendered here -->
+                        <!-- Tab Content -->
+                        <div id="tab-daftar-user" class="user-tab-content py-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Daftar User Terdaftar</h3>
+                                <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center" onclick="openUserModal()"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah User</button>
+                            </div>
+                            <div id="user-table-container" class="overflow-x-auto">
+                               <!-- User table will be rendered here -->
+                            </div>
+                        </div>
+                        <div id="tab-pengaturan-role" class="user-tab-content hidden py-6">
+                            <form id="formRoleSettings">
+                                <div id="role-settings-container" class="space-y-6">
+                                    <!-- Role settings will be rendered here -->
+                                </div>
+                                <div class="pt-6 flex justify-end border-t border-[var(--border-color)] mt-6">
+                                    <button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center">
+                                        <i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan Hak Akses
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -436,7 +461,7 @@
                         <h3 class="text-lg font-semibold mb-4">Manajemen Inventaris & Harga</h3>
                         <!-- Tabs -->
                         <div class="border-b border-[var(--border-color)]">
-                            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                            <nav class="flex space-x-2" aria-label="Tabs">
                                 <button class="inventory-tab-button tab-button active" data-target="tab-kamar">Tipe Kamar</button>
                                 <button class="inventory-tab-button tab-button" data-target="tab-ruang-meeting">Ruang Meeting</button>
                                 <button class="inventory-tab-button tab-button" data-target="tab-paket-meeting">Paket Meeting</button>
@@ -473,11 +498,10 @@
                         <h3 class="text-lg font-semibold mb-4">Pengaturan</h3>
                         <!-- Tabs -->
                         <div class="border-b border-[var(--border-color)]">
-                            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                            <nav class="flex space-x-2" aria-label="Tabs">
                                 <button class="settings-tab-button tab-button active" data-target="tab-profil">Profil Perusahaan</button>
                                 <button class="settings-tab-button tab-button" data-target="tab-pajak">Pajak & Pelayanan</button>
                                 <button class="settings-tab-button tab-button" data-target="tab-agenda-type">Tipe Agenda</button>
-                                <button class="settings-tab-button tab-button" data-target="tab-role">Pengaturan Role</button>
                             </nav>
                         </div>
                         <!-- Tab Content -->
@@ -534,18 +558,6 @@
                             <div id="pengaturan-agenda-table-container" class="overflow-x-auto">
                                 <!-- Agenda type table will be rendered here -->
                             </div>
-                        </div>
-                        <div id="tab-role" class="tab-content py-6 hidden">
-                            <form id="formRoleSettings">
-                                <div id="role-settings-container" class="space-y-6">
-                                    <!-- Role settings will be rendered here -->
-                                </div>
-                                <div class="pt-6 flex justify-end border-t border-[var(--border-color)] mt-6">
-                                    <button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center">
-                                        <i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan Hak Akses
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
