@@ -56,10 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             "rose": { name: "Rose Ballroom (100 pax)", rentalPrice: 5000000 }
         },
         users: [ 
-            { id: 1, name: 'Sales Hotel', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
-            { id: 2, name: 'GM Hotel', email: 'gm@hotel.com', role: 'Manager', password: 'password123' },
-            { id: 4, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: 'password123' },
-            { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
+            { id: 1, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
             "2025-07": {
@@ -3785,4 +3782,5 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('contextmenu', event => event.preventDefault());
 
     });
+
 
