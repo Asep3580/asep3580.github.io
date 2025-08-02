@@ -56,8 +56,9 @@ document.addEventListener('DOMContentLoaded', function() {
             "rose": { name: "Rose Ballroom (100 pax)", rentalPrice: 5000000 }
         },
         users: [ 
-            { id: 1, name: 'Siti Saleha', email: 'siti@hotel.com', role: 'Sales', password: 'password123' },
-            { id: 2, name: 'Admin Hotel', email: 'admin@hotel.com', role: 'Admin', password: 'password123' },
+            { id: 1, name: 'Sales Hotel', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
+            { id: 2, name: 'GM Hotel', email: 'gm@hotel.com', role: 'Manager', password: 'password123' },
+            { id: 4, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: 'devpassword' },
             { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
@@ -75,13 +76,13 @@ document.addEventListener('DOMContentLoaded', function() {
         settings: {
             companyProfile: {
                 name: 'CRM Hotel Anda',
-                logoUrl: 'https://www.smartsalescrm.com/assets/images/logo/smart-sales-crm-software-logo.png',
+                logoUrl: 'https://asep3580.github.io/assets/logo.png',
                 phone: '021-1234-5678',
                 address: 'Jl. CRM Sejahtera No. 1, Jakarta, Indonesia'
             },
             taxAndServicePercentage: 21,
             invoiceSettings: {
-                logoUrl: 'https://crm.kagum-hotel.com/images/kagum-logo.png',
+                logoUrl: 'https://asep3580.github.io/assets/logo.png',
                 paymentNotes: 'Pembayaran dapat ditransfer ke:\nBank ABC\nNo. Rek: 123-456-7890\nA/N: PT. Hotel Sejahtera'
             },
             rolePermissions: {
@@ -3782,4 +3783,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Disable right-click context menu
         document.addEventListener('contextmenu', event => event.preventDefault());
+
     });
