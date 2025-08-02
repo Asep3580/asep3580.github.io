@@ -56,7 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
             "rose": { name: "Rose Ballroom (100 pax)", rentalPrice: 5000000 }
         },
         users: [ 
-            { id: 1, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
+            { id: 1, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' },
+            { id: 2, name: 'Sales', email: 'sales@hotel.com', role: 'Sales', password: '123' },
+            { id: 3, name: 'General Manager', email: 'gm@hotel.com', role: 'Manager', password: '123' },
+            { id: 4, name: 'Accounting', email: 'acct@hotel.com', role: 'Accounting', password: '123' },
         ],
         targets: {
             "2025-07": {
@@ -85,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rolePermissions: {
                 'Sales': {
                     'dashboard': true, 'kalender': true, 'pelanggan': true, 'agenda': true,
-                    'booking-kamar': true, 'booking-meeting': true, 'pembayaran': true, 'laporan': true, 'laporan-sales': true,
+                    'booking-kamar': true, 'booking-meeting': true, 'pembayaran': true, 'laporan': false, 'laporan-sales': true,
                     'manajemen-user': false, 'manajemen-inventaris': false, 'manajemen-pengaturan': false, 'manajemen-target': false,
                     'can_verify_payment': false
                 },
@@ -3782,5 +3785,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('contextmenu', event => event.preventDefault());
 
     });
+
 
 
