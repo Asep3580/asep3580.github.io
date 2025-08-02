@@ -119,52 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
         notifications: []
     };
 
-    // --- GEMINI API INTEGRATION ---
-    /**
-     * A reusable function to call the Gemini API.
-     * @param {string} prompt The prompt to send to the Gemini API.
-     * @returns {Promise<string>} The text response from the API.
-     */
-    async function callGeminiAPI(prompt) {
-        const apiKey = ""; // API key is handled by the environment.
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        
-        const payload = {
-            contents: [{
-                role: "user",
-                parts: [{ text: prompt }]
-            }]
-        };
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorBody = await response.json();
-                console.error("Gemini API Error:", errorBody);
-                throw new Error(`API request failed with status ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (result.candidates && result.candidates.length > 0 &&
-                result.candidates[0].content && result.candidates[0].content.parts &&
-                result.candidates[0].content.parts.length > 0) {
-                return result.candidates[0].content.parts[0].text;
-            } else {
-                console.error("Unexpected API response structure:", result);
-                return "Gagal mendapatkan respons dari AI. Struktur respons tidak valid.";
-            }
-        } catch (error) {
-            console.error("Error calling Gemini API:", error);
-            return `Terjadi kesalahan saat menghubungi AI: ${error.message}`;
-        }
-    }
-
     // --- DATA PERSISTENCE ---
     function saveData() {
         localStorage.setItem('hotelCrmData', JSON.stringify(db));
@@ -349,6 +303,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('sidebar-logout-button').addEventListener('click', logout);
 
+    // Password visibility toggle
+    const togglePasswordBtn = document.getElementById('toggle-password-visibility');
+    const passwordInput = document.getElementById('login-password');
+
+    if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            const icon = this.querySelector('i');
+            icon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        });
+    }
+
+    // --- THEME MANAGEMENT ---
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        const icon = themeToggleBtn.querySelector('i');
+        if (icon) {
+            icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(newTheme);
+    }
+
+    if (themeToggleBtn) { themeToggleBtn.addEventListener('click', toggleTheme); }
+
+
     // --- UI/UX FUNCTIONS ---
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast-notification');
@@ -420,6 +411,16 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Definite': return `<span class="bg-green-500/20 text-green-400 ${baseClasses}">Definite</span>`;
             case 'Tentative': return `<span class="bg-yellow-500/20 text-yellow-400 ${baseClasses}">Tentative</span>`;
             default: return '';
+        }
+    }
+
+    function getBookingStatusBadge(status) {
+        const baseClasses = "text-xs font-medium px-2.5 py-0.5 rounded-full";
+        switch (status) {
+            case 'Terkonfirmasi': return `<span class="bg-green-500/20 text-green-400 ${baseClasses}">Terkonfirmasi</span>`;
+            case 'Baru': return `<span class="bg-blue-500/20 text-blue-400 ${baseClasses}">Baru</span>`;
+            case 'Batal': return `<span class="bg-red-500/20 text-red-400 ${baseClasses}">Batal</span>`;
+            default: return `<span class="bg-gray-500/20 text-gray-400 ${baseClasses}">${status}</span>`;
         }
     }
 
@@ -578,7 +579,6 @@ document.addEventListener('DOMContentLoaded', function() {
         filteredPelanggan.forEach(p => {
             const waNumber = formatPhoneNumberForWhatsApp(p.telepon);
             let aksiHtml = `<td class="p-3 flex space-x-1">
-                                <button onclick="openWhatsAppModal(${p.id})" title="Buat Pesan WhatsApp" class="p-2 text-purple-400 hover:text-purple-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="message-square-plus" class="w-4 h-4"></i></button>
                                 <button onclick="openPelangganModal(${p.id})" title="Edit Pelanggan" class="p-2 text-yellow-400 hover:text-yellow-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
                                 ${canManage ? `<button onclick="confirmDelete('pelanggan', ${p.id})" title="Hapus Pelanggan" class="p-2 text-red-500 hover:text-red-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                             </td>`;
@@ -783,6 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <th class="p-3">Dibayar</th>
                                     <th class="p-3">Sisa</th>
                                     <th class="p-3">Status Bayar</th>
+                                    <th class="p-3">Status Booking</th>
                                     <th class="p-3">Aksi</th>
                                 </tr>
                             </thead>
@@ -803,8 +804,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i> Dibatalkan
                             </span>`;
             } else {
+                const viewPaymentsButton = paymentInfo.payments.length > 0
+                    ? `<button onclick="openPaymentHistoryModal('${b.id}')" title="Lihat Riwayat Pembayaran" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="history" class="w-4 h-4 mr-1"></i> Lihat Bayar</button>`
+                    : '';
+
                 aksiHtml = `<button onclick="generateInvoice('${b.id}')" title="Cetak Invoice" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="receipt" class="w-4 h-4 mr-1"></i> Invoice</button>
-                            <button onclick="openCancellationModal('${b.id}')" title="Batalkan Booking" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="ban" class="w-4 h-4 mr-1"></i> Batalkan</button>`;
+                            <button onclick="openCancellationModal('${b.id}')" title="Batalkan Booking" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="ban" class="w-4 h-4 mr-1"></i> Batalkan</button>
+                            ${viewPaymentsButton}`;
             }
 
             tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
@@ -815,6 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="p-3 text-green-500">${formatCurrency(paymentInfo.totalVerifiedPaid)}</td>
                 <td class="p-3 text-red-500">${formatCurrency(paymentInfo.balance)}</td>
                 <td class="p-3">${getPaymentStatusBadge(paymentStatus)}</td>
+                <td class="p-3">${getBookingStatusBadge(b.status)}</td>
                 <td class="p-3 flex flex-wrap gap-1">${aksiHtml}</td>
             </tr>`;
         });
@@ -901,16 +908,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>`;
             }
 
-            // Check for payments with proof
-            const paymentsWithProof = paymentInfo.payments.filter(p => p.proofUrl);
-            let viewProofButton = '';
-            if (paymentsWithProof.length > 0) {
-                // Just show a button for the latest proof for simplicity
-                const latestPaymentWithProof = paymentsWithProof.sort((a, b) => b.id - a.id)[0];
-                viewProofButton = `<button onclick="openProofModal(${latestPaymentWithProof.id})" title="Lihat Bukti Bayar" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center">
-                    <i data-lucide="image" class="w-4 h-4 mr-1"></i> Bukti
-                </button>`;
-            }
+            const viewPaymentsButton = paymentInfo.payments.length > 0
+                ? `<button onclick="openPaymentHistoryModal('${b.id}')" title="Lihat Riwayat Pembayaran" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="history" class="w-4 h-4 mr-1"></i> Lihat Bayar</button>`
+                : '';
 
             tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]" data-booking-id="${b.id}">
                 <td class="p-3 font-mono">${b.id}</td>
@@ -920,12 +920,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="p-3">${formatCurrency(b.totalHarga)}</td>
                 <td class="p-3 font-bold text-red-500">${formatCurrency(paymentInfo.balance)}</td>
                 <td class="p-3">${getPaymentStatusBadge(paymentStatus)}</td>
-                <td class="p-3 flex space-x-1">
+                <td class="p-3 flex flex-wrap gap-1">
                     <button onclick="openPaymentModal('${b.id}')" title="Input Pembayaran" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center">
                         <i data-lucide="dollar-sign" class="w-4 h-4 mr-1"></i> Bayar
                     </button>
                     ${verificationButton}
-                    ${viewProofButton}
                 </td>
             </tr>`;
         });
@@ -954,11 +953,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            let fotoHtml = '';
-            if (item.fotoUrl) {
-                fotoHtml = `<button onclick="openAgendaPhotoModal(${item.id})" class="mt-2 text-xs text-blue-400 hover:underline flex items-center"><i data-lucide="camera" class="w-3 h-3 mr-1"></i>Lihat Foto</button>`;
-            }
-            
             let actionButtons = `<div class="flex items-center space-x-1 flex-shrink-0 ml-4">`;
             if (item.status === 'Tentative') {
                 actionButtons += `<button onclick="confirmSetDefinite(${item.id})" title="Set Definite" class="p-2 text-green-500 hover:bg-[var(--bg-hover)] rounded-full"><i data-lucide="shield-check" class="w-5 h-5"></i></button>`;
@@ -980,7 +974,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-sm text-[var(--text-secondary)]">${new Date(item.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} | ${item.jamMulai} - ${item.jamSelesai}</p>
                     <div class="mt-2">${lokasiHtml}</div>
                     <p class="text-xs text-gray-500 mt-1">${item.catatan || ''}</p>
-                    ${fotoHtml}
                 </div>
                 ${actionButtons}
             </div>`;
@@ -1606,10 +1599,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
-            events: [], // Will be populated by populateCalendar
-            eventClick: function(info) {
-                showEventDetails(info.event);
-            },
             height: 'auto'
         });
 
@@ -1680,24 +1669,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         calendar.removeAllEvents();
         calendar.addEventSource(events);
-    }
-    
-    function showEventDetails(event) {
-        const modalTitle = document.getElementById('geminiModalTitle');
-        const modalContent = document.getElementById('geminiModalContent');
-
-        modalTitle.innerHTML = `<i data-lucide="info" class="w-5 h-5 mr-2 text-[var(--accent)]"></i> Detail Event`;
-        modalContent.innerHTML = `
-            <h4 class="font-bold text-lg">${event.title}</h4>
-            <p><strong>Tipe:</strong> ${event.extendedProps.type}</p>
-            ${event.extendedProps.status ? `<p><strong>Status:</strong> ${event.extendedProps.status}</p>` : ''}
-            <p><strong>Pelanggan:</strong> ${event.extendedProps.customer}</p>
-            <p><strong>Waktu Mulai:</strong> ${event.start ? event.start.toLocaleString() : 'N/A'}</p>
-            <p><strong>Waktu Selesai:</strong> ${event.end ? event.end.toLocaleString() : 'N/A'}</p>
-            <p><strong>Detail:</strong> ${event.extendedProps.details}</p>
-        `;
-        lucide.createIcons();
-        openModal('geminiModal');
     }
 
 
@@ -1946,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let hasInitialMarker = false;
 
         if (id) {
-            const item = db.agenda.find(a => a.id === id);
+            const item = db.agenda.find(a => a.id === id); // This should be a number
             if (item) {
                 title.textContent = 'Edit Agenda Meeting'; idInput.value = item.id;
                 document.getElementById('agenda-judul').value = item.judul;
@@ -1964,7 +1935,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (item.lokasi && /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(item.lokasi)) {
-                    initialCoords = item.lokasi.split(',').map(Number);
+                    initialCoords = item.lokasi.split(',').map(coord => parseFloat(coord.trim()));
                     initialZoom = 16;
                     hasInitialMarker = true;
                 }
@@ -1975,10 +1946,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         openModal('agendaModal');
 
-        initializeAgendaMap(initialCoords, initialZoom);
-        if (hasInitialMarker) {
-            updateMapAndMarker(initialCoords, false);
-        }
+        // Inisialisasi peta setelah modal terlihat untuk memastikan ukuran kontainer benar
+        setTimeout(() => {
+            initializeAgendaMap(initialCoords, initialZoom);
+            if (hasInitialMarker) updateMapAndMarker(initialCoords, false);
+            agendaMap.invalidateSize(); // Penting untuk memastikan peta dirender dengan benar di dalam modal
+        }, 150);
     }
 
     window.markAgendaComplete = (id) => { const item = db.agenda.find(a => a.id === id); if (item) { item.status = 'selesai'; saveData(); renderAll(); showToast('Agenda ditandai selesai.'); } }
@@ -2006,6 +1979,47 @@ document.addEventListener('DOMContentLoaded', function() {
             passwordInput.required = true;
         }
         openModal('userModal');
+    }
+
+    function initializeAgendaMap(coords, zoom) {
+        // Hapus peta lama jika ada untuk mencegah duplikasi
+        if (agendaMap) {
+            agendaMap.remove();
+            agendaMap = null;
+        }
+        agendaMap = L.map('agenda-map-container').setView(coords, zoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(agendaMap);
+
+        // Event listener saat peta diklik
+        agendaMap.on('click', function(e) {
+            updateMapAndMarker([e.latlng.lat, e.latlng.lng]);
+        });
+    }
+
+    function updateMapAndMarker(coords, setView = true) {
+        const [lat, lon] = coords;
+        const locationInput = document.getElementById('agenda-lokasi');
+        locationInput.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+
+        if (!agendaMap) return;
+
+        if (setView) {
+            agendaMap.setView(coords, 16);
+        }
+
+        if (agendaMarker) {
+            agendaMarker.setLatLng(coords);
+        } else {
+            agendaMarker = L.marker(coords, { draggable: true }).addTo(agendaMap);
+            // Event listener saat marker digeser
+            agendaMarker.on('dragend', function(event) {
+                const marker = event.target;
+                const position = marker.getLatLng();
+                updateMapAndMarker([position.lat, position.lng], false);
+            });
+        }
     }
 
     window.openPaymentModal = (bookingId) => {
@@ -2076,27 +2090,6 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('priceHistoryModal');
     };
 
-    window.openAgendaPhotoModal = (agendaId) => {
-        const agenda = db.agenda.find(a => a.id === agendaId);
-        if (!agenda || !agenda.fotoUrl) {
-            showToast('Foto agenda tidak ditemukan.', 'error');
-            return;
-        }
-
-        const modalTitle = document.getElementById('geminiModalTitle');
-        const modalContent = document.getElementById('geminiModalContent');
-
-        modalTitle.innerHTML = `<i data-lucide="image" class="w-5 h-5 mr-2 text-[var(--accent)]"></i> Foto Agenda`;
-        modalContent.innerHTML = `
-            <p class="text-sm text-[var(--text-secondary)]">Agenda: <strong class="text-[var(--text-primary)]">${agenda.judul}</strong></p>
-            <div class="mt-4">
-                <img src="${agenda.fotoUrl}" alt="Foto Agenda" class="rounded-lg max-w-full h-auto mx-auto">
-            </div>
-        `;
-        lucide.createIcons();
-        openModal('geminiModal');
-    };
-
     window.openVerificationModal = (bookingId) => {
         const paymentInfo = getPaymentInfo(bookingId);
         const unverifiedPayments = paymentInfo.payments.filter(p => !p.verified);
@@ -2117,7 +2110,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="checkbox" name="payment-to-verify" value="${p.id}" class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
                     <div class="flex-1 flex justify-between items-center text-sm">
                         <span>${formatCurrency(p.jumlah)} - ${new Date(p.tanggal + 'T00:00:00').toLocaleDateString('id-ID')} (${p.metode})</span>
-                        ${p.proofUrl ? `<button type="button" onclick="openProofModal(${p.id})" class="text-xs text-blue-400 hover:underline">Lihat Bukti</button>` : ''}
                     </div>
                 </label>
             `;
@@ -2126,32 +2118,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
         openModal('verificationModal');
     };
-
-    window.openProofModal = (paymentId) => {
-        const payment = db.payments.find(p => p.id === paymentId);
-        if (!payment || !payment.proofUrl) {
-            showToast('Bukti pembayaran tidak ditemukan.', 'error');
-            return;
-        }
-
-        const modalTitle = document.getElementById('geminiModalTitle');
-        const modalContent = document.getElementById('geminiModalContent');
-
-        modalTitle.innerHTML = `<i data-lucide="image" class="w-5 h-5 mr-2 text-[var(--accent)]"></i> Bukti Pembayaran`;
-        modalContent.innerHTML = `
-            <p class="text-sm text-[var(--text-secondary)]">Booking ID: <strong class="text-[var(--text-primary)]">${payment.bookingId}</strong></p>
-            <p class="text-sm text-[var(--text-secondary)]">Tanggal Bayar: <strong class="text-[var(--text-primary)]">${new Date(payment.tanggal + 'T00:00:00').toLocaleDateString('id-ID')}</strong></p>
-            <p class="text-sm text-[var(--text-secondary)]">Jumlah: <strong class="text-[var(--text-primary)]">${formatCurrency(payment.jumlah)}</strong></p>
-            <div class="mt-4">
-                <img src="${payment.proofUrl}" alt="Bukti Pembayaran" class="rounded-lg max-w-full h-auto mx-auto">
-            </div>
-        `;
-        lucide.createIcons();
-        openModal('geminiModal');
-    };
     // --- CONFIRMATION & DELETE LOGIC ---
         let confirmCallback = null;
         
+    window.openPaymentHistoryModal = (bookingId) => {
+        const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
+        if (!booking) return;
+
+        const paymentInfo = getPaymentInfo(bookingId);
+        const titleEl = document.getElementById('paymentHistoryModalTitle');
+        const contentEl = document.getElementById('paymentHistoryContent');
+
+        titleEl.textContent = `Riwayat Pembayaran: ${bookingId}`;
+
+        if (paymentInfo.payments.length === 0) {
+            contentEl.innerHTML = getEmptyState('Belum ada pembayaran untuk booking ini.');
+            lucide.createIcons();
+            openModal('paymentHistoryModal');
+            return;
+        }
+
+        let historyHtml = '';
+        [...paymentInfo.payments].reverse().forEach(p => {
+            const verifier = p.verifiedBy ? db.users.find(u => u.id === p.verifiedBy) : null;
+            const statusBadge = p.verified 
+                ? `<span class="bg-green-500/20 text-green-400 text-xs font-medium px-2.5 py-0.5 rounded-full">Terverifikasi</span>`
+                : `<span class="bg-yellow-500/20 text-yellow-400 text-xs font-medium px-2.5 py-0.5 rounded-full">Menunggu Verifikasi</span>`;
+            
+            const proofButton = p.proofUrl 
+                ? `<button onclick="openProofModal('${p.proofUrl}')" class="text-xs text-blue-400 hover:underline flex items-center"><i data-lucide="image" class="w-3 h-3 mr-1"></i>Lihat Bukti</button>` 
+                : '';
+
+            historyHtml += `
+                <div class="p-4 bg-[var(--bg-tertiary)]/50 rounded-lg border border-[var(--border-color)]">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-semibold text-lg">${formatCurrency(p.jumlah)}</p>
+                            <p class="text-xs text-[var(--text-secondary)]">${new Date(p.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { dateStyle: 'long' })} | ${p.metode} | ${p.tipe}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${proofButton}
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    ${p.verified ? `
+                    <div class="mt-2 pt-2 border-t border-dashed border-[var(--border-color)] text-xs text-[var(--text-secondary)]">
+                        <p><strong>Diverifikasi oleh:</strong> ${verifier ? verifier.name : 'N/A'}</p>
+                        <p><strong>Catatan Verifikasi:</strong> ${p.verificationNote || '-'}</p>
+                    </div>
+                    ` : ''}
+                </div>`;
+        });
+
+        contentEl.innerHTML = historyHtml;
+        lucide.createIcons();
+        openModal('paymentHistoryModal');
+    };
+
+    window.openProofModal = (proofUrl) => {
+        if (!proofUrl) {
+            showToast('URL bukti pembayaran tidak valid.', 'error');
+            return;
+        }
+        document.getElementById('proofModalImage').src = proofUrl;
+        openModal('proofModal');
+    };
         window.confirmSetDefinite = (id) => {
             document.getElementById('confirm-title').textContent = 'Konfirmasi Status Definite';
             document.getElementById('confirm-message').textContent = 'Apakah Anda yakin data sudah benar dan ingin mengubah status agenda ini menjadi DEFINITE?';
@@ -2585,10 +2616,32 @@ document.addEventListener('DOMContentLoaded', function() {
             doc.save(`Konfirmasi-Meeting-${booking.id}.pdf`);
         };
         // --- EVENT LISTENERS ---
-        const sidebar = document.getElementById('sidebar'), sidebarToggle = document.getElementById('sidebar-toggle'), sidebarBackdrop = document.getElementById('sidebar-backdrop'), navLinks = document.querySelectorAll('.nav-link'), contentSections = document.querySelectorAll('.content-section'), pageTitle = document.getElementById('page-title');
-        window.toggleSidebar = () => { sidebar.classList.toggle('-translate-x-full'); sidebarBackdrop.classList.toggle('hidden'); }
-        sidebarToggle.addEventListener('click', window.toggleSidebar);
-        sidebarBackdrop.addEventListener('click', window.toggleSidebar);
+        const sidebar = document.getElementById('sidebar'), 
+              sidebarToggle = document.getElementById('sidebar-toggle'), 
+              sidebarBackdrop = document.getElementById('sidebar-backdrop'), 
+              navLinks = document.querySelectorAll('.nav-link'), 
+              contentSections = document.querySelectorAll('.content-section'), 
+              pageTitle = document.getElementById('page-title');
+
+        const handleSidebarToggle = () => {
+            if (window.innerWidth < 1024) {
+                // Mobile behavior: slide in/out from the side
+                sidebar.classList.toggle('-translate-x-full');
+                sidebarBackdrop.classList.toggle('hidden');
+            } else {
+                // Desktop behavior: collapse/expand the sidebar
+                appContainer.classList.toggle('sidebar-collapsed');
+                // Resize charts after transition to prevent layout issues
+                setTimeout(() => {
+                    if (salesTargetChartInstance) salesTargetChartInstance.resize();
+                    if (bookingTypeChartInstance) bookingTypeChartInstance.resize();
+                    if (segmentTargetChartInstance) segmentTargetChartInstance.resize();
+                    if (calendar) calendar.updateSize();
+                }, 300); // This duration should match the CSS transition
+            }
+        };
+        sidebarToggle.addEventListener('click', handleSidebarToggle);
+        sidebarBackdrop.addEventListener('click', handleSidebarToggle);
 
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
@@ -2600,8 +2653,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 contentSections.forEach(s => s.id === targetId ? s.classList.remove('hidden') : s.classList.add('hidden'));
 
                 // Secara otomatis menyembunyikan sidebar saat item menu diklik pada layar kecil
-                if (window.innerWidth < 1024) {
-                    window.toggleSidebar();
+                if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
+                    handleSidebarToggle();
                 }
             });
         });
@@ -2841,7 +2894,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkin: document.getElementById('bk-checkin').value,
                 checkout: document.getElementById('bk-checkout').value,
                 totalHarga: totalHarga,
-                status: 'Baru',
+                status: 'Terkonfirmasi',
                 cancellationReason: null,
                 cancelledBy: null,
                 rooms: rooms,
@@ -2874,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 jamMulai: document.getElementById('bm-jam-mulai').value,
                 jamBerakhir: document.getElementById('bm-jam-berakhir').value,
                 totalHarga: total,
-                status: 'Baru',
+                status: 'Terkonfirmasi',
                 cancellationReason: null,
                 cancelledBy: null,
                 roomKey: document.getElementById('bm-tipe-ruang').value,
@@ -3381,27 +3434,42 @@ document.addEventListener('DOMContentLoaded', function() {
             currentSalesReportData = filteredBookings;
             currentSalesAgendaData = filteredAgendas;
 
-            renderSalesReportTable(currentSalesReportData);
+            renderSalesReportTable(currentSalesReportData, currentSalesAgendaData);
             renderSalesAgendaReportTable(currentSalesAgendaData);
         });
 
-        function renderSalesReportTable(data) {
+        function renderSalesReportTable(bookingData, agendaData) {
             const container = document.getElementById('sales-report-container');
             const actionsContainer = document.getElementById('sales-report-actions');
-            const aiContainer = document.getElementById('ai-summary-container');
+            const summaryContainer = document.getElementById('sales-report-summary');
             document.getElementById('sales-agenda-report-section').classList.add('hidden');
 
-            // Hide AI summary when a new report is generated
-            aiContainer.classList.add('hidden');
+            // Always calculate and update summary cards
+            const totalRevenue = bookingData.reduce((sum, b) => sum + b.totalHarga, 0);
+            document.getElementById('sales-report-total-revenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('sales-report-total-bookings').textContent = bookingData.length;
+            document.getElementById('sales-report-total-agendas').textContent = agendaData.length;
 
-            if (data.length === 0) {
-                container.innerHTML = getEmptyState('Tidak ada data penjualan untuk periode yang dipilih.');
+            // Handle visibility of all components based on data presence
+            if (bookingData.length === 0 && agendaData.length === 0) {
+                container.innerHTML = getEmptyState('Tidak ada data penjualan atau agenda untuk periode yang dipilih.');
                 actionsContainer.classList.add('hidden');
+                summaryContainer.classList.add('hidden');
                 lucide.createIcons();
                 return;
             }
 
-            let totalRevenue = 0;
+            // If we reach here, there is some data, so show the summary
+            summaryContainer.classList.remove('hidden');
+
+            // Handle the booking table and its actions
+            if (bookingData.length === 0) {
+                container.innerHTML = getEmptyState('Tidak ada data penjualan untuk periode yang dipilih.');
+                actionsContainer.classList.add('hidden');
+                lucide.createIcons();
+                return; // Return here because there's no table to render
+            }
+
             let tableHtml = `<table class="w-full text-left">
                 <thead><tr class="border-b border-[var(--border-color)]">
                     <th class="p-3">ID Booking</th>
@@ -3413,10 +3481,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr></thead>
                 <tbody>`;
 
-            data.forEach(b => {
+            bookingData.forEach(b => {
                 const customer = db.pelanggan.find(p => p.id === b.pelangganId);
                 const sales = db.users.find(u => u.id === b.createdBy);
-                totalRevenue += b.totalHarga;
 
                 tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                     <td class="p-3">${b.id}</td>
@@ -3610,105 +3677,6 @@ document.addEventListener('DOMContentLoaded', function() {
             XLSX.writeFile(workbook, `Laporan-Sales-${selectedSalesName}-${startDate}-to-${endDate}.xlsx`);
         });
 
-        // --- AI FEATURE LISTENERS ---
-        document.getElementById('generate-ai-summary-btn').addEventListener('click', async function() {
-            const aiContainer = document.getElementById('ai-summary-container');
-            const aiContent = document.getElementById('ai-summary-content');
-            
-            aiContainer.classList.remove('hidden');
-            aiContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div><p class="ml-4">AI sedang menganalisis data...</p></div>`;
-            this.disabled = true;
-
-            const dataForPrompt = currentSalesReportData.map(b => {
-                const customer = db.pelanggan.find(p => p.id === b.pelangganId);
-                const sales = db.users.find(u => u.id === b.createdBy);
-                return {
-                    tanggal: b.tanggalBooking.split('T')[0],
-                    pelanggan: customer ? customer.nama : 'N/A',
-                    segmentasi: customer ? customer.segmentasi : 'N/A',
-                    tipe: b.tipeBooking,
-                    sales: sales ? sales.name : 'N/A',
-                    total: b.totalHarga
-                };
-            });
-
-            const prompt = `Anda adalah seorang analis penjualan ahli untuk sebuah hotel. Berdasarkan data penjualan berikut dalam format JSON, berikan ringkasan performa penjualan dalam Bahasa Indonesia.
-            Fokus pada:
-            1. Total pendapatan dan jumlah booking.
-            2. Performa penjualan oleh masing-masing sales (siapa yang paling top).
-            3. Segmen pelanggan mana yang paling banyak berkontribusi.
-            4. Berikan 2-3 insight atau saran yang bisa ditindaklanjuti untuk meningkatkan penjualan di periode berikutnya.
-            Gunakan format ringkas dengan poin-poin (gunakan markdown untuk heading dan list).
-            Data: ${JSON.stringify(dataForPrompt, null, 2)}`;
-
-            const summary = await callGeminiAPI(prompt);
-            aiContent.innerHTML = summary.replace(/\n/g, '<br>'); // Simple formatting
-            aiContent.classList.add('fade-in');
-            this.disabled = false;
-        });
-
-        window.openWhatsAppModal = (customerId) => {
-            const customer = db.pelanggan.find(p => p.id === customerId);
-            if (!customer) return;
-            
-            const modalTitle = document.getElementById('geminiModalTitle');
-            const modalContent = document.getElementById('geminiModalContent');
-            
-            modalTitle.innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i> Asisten AI`;
-            modalContent.innerHTML = `
-                <p class="text-sm text-[var(--text-secondary)]">Buat pesan WhatsApp untuk: <strong class="text-[var(--text-primary)]">${customer.nama}</strong></p>
-                <div>
-                    <label for="wa-template-select" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Pilih Template Pesan</label>
-                    <select id="wa-template-select" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
-                        <option value="follow_up">Follow-up Penawaran</option>
-                        <option value="promo">Promo Baru</option>
-                        <option value="thank_you">Ucapan Terima Kasih (setelah menginap)</option>
-                    </select>
-                </div>
-                <button id="generate-wa-btn" class="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center justify-center">
-                    <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i> Buat Pesan
-                </button>
-                <div id="wa-result-container" class="hidden">
-                    <label class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Hasil Pesan:</label>
-                    <textarea id="wa-result-textarea" rows="6" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]"></textarea>
-                    <button id="copy-wa-btn" class="mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm">
-                        <i data-lucide="copy" class="w-4 h-4 mr-2"></i> Salin Pesan
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
-            openModal('geminiModal');
-
-            document.getElementById('generate-wa-btn').addEventListener('click', async function() {
-                const templateSelect = document.getElementById('wa-template-select');
-                const templateText = templateSelect.options[templateSelect.selectedIndex].text;
-                const resultContainer = document.getElementById('wa-result-container');
-                const resultTextarea = document.getElementById('wa-result-textarea');
-                
-                resultContainer.classList.remove('hidden');
-                resultTextarea.value = "AI sedang menulis pesan...";
-                this.disabled = true;
-
-                const prompt = `Anda adalah seorang sales hotel yang ramah dan profesional bernama ${currentUser.name}. Buat sebuah pesan WhatsApp singkat untuk pelanggan bernama ${customer.nama} dari ${customer.perusahaan || 'pribadi'}.
-                Tujuan pesan: ${templateText}.
-                Gunakan sapaan yang sesuai (Bapak/Ibu). Sebut nama pelanggan agar terasa personal. Jaga agar pesan tetap singkat, jelas, dan ramah. Akhiri dengan nama Anda.`;
-
-                const message = await callGeminiAPI(prompt);
-                resultTextarea.value = message;
-                this.disabled = false;
-            });
-            document.getElementById('copy-wa-btn').addEventListener('click', async function() {
-                const textarea = document.getElementById('wa-result-textarea');
-                try {
-                    await navigator.clipboard.writeText(textarea.value);
-                    showToast('Pesan berhasil disalin!');
-                } catch (err) {
-                    showToast('Gagal menyalin pesan.', 'error');
-                    console.error('Fallback: Oops, unable to copy', err);
-                }
-            });
-        };
-
         // --- INITIALIZATION ---
         function initTargetPage() {
             const bulanSelect = document.getElementById('target-bulan');
@@ -3776,6 +3744,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         loadData();
+
+        // --- THEME INITIALIZATION ---
+        const savedTheme = localStorage.getItem('theme') || 'light'; // Default to light theme
+        applyTheme(savedTheme);
+
         updateGlobalLogo(db.settings.companyProfile.logoUrl);
         updatePageTitle(db.settings.companyProfile.name);
         initTargetPage();
@@ -3788,4 +3761,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-
+    

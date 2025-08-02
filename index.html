@@ -36,6 +36,70 @@
             }
         }
     </style>
+    <style>
+        /* Smooth Modal Transitions */
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-content {
+            transition: transform 0.3s ease-in-out;
+        }
+    </style>
+    <style>
+        /* Collapsed Sidebar Styles for Desktop */
+        @media (min-width: 1024px) {
+            #sidebar, main {
+                transition: all 0.3s ease-in-out;
+            }
+            #app-container.sidebar-collapsed #sidebar {
+                width: 80px;
+            }
+            #app-container.sidebar-collapsed #sidebar .link-text,
+            #app-container.sidebar-collapsed #sidebar h3 {
+                display: none;
+            }
+            #app-container.sidebar-collapsed #sidebar .sidebar-header {
+                padding: 1rem;
+                justify-content: center;
+            }
+            #app-container.sidebar-collapsed #sidebar .nav-link,
+            #app-container.sidebar-collapsed #sidebar #sidebar-logout-button {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            #app-container.sidebar-collapsed #sidebar .nav-link i,
+            #app-container.sidebar-collapsed #sidebar #sidebar-logout-button i {
+                margin-right: 0;
+                width: 1.5rem; /* 24px */
+                height: 1.5rem; /* 24px */
+            }
+            #app-container.sidebar-collapsed #sidebar .sidebar-section-divider {
+                margin: 0.75rem 1rem 0;
+                padding-top: 0.75rem;
+            }
+            #app-container.sidebar-collapsed #sidebar .sidebar-header img {
+                background-color: var(--bg-hover);
+                border-radius: 6px;
+                padding: 4px;
+            }
+        }
+        /* --- Perbaikan Visibilitas Ikon & Tautan --- */
+        /* 1. Atur warna yang lebih gelap dan menonjol untuk ikon yang tidak aktif pada tema terang. */
+        [data-theme="light"] .nav-link i {
+            color: #4b5563; /* gray-600 */
+        }
+        /* 2. Pastikan tautan aktif memiliki latar belakang gelap pada tema terang untuk kontras tinggi dengan ikon putih. */
+        [data-theme="light"] .nav-link.active,
+        [data-theme="light"] .nav-link.active:hover {
+            background-color: #065f46; /* Darker green for better contrast with white icon */
+            color: rgb(239, 237, 237); /* Pastikan ikon dan teks berwarna putih */
+        }
+        /* 3. Pastikan warna ikon saat di-hover juga menonjol. */
+        [data-theme="light"] .nav-link:hover i {
+            color: #1f2937; /* gray-800 */
+        }
+    </style>
 </head>
 <body class="bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased">
 
@@ -59,7 +123,12 @@
                 </div>
                 <div>
                     <label for="login-password" class="block text-sm font-medium text-[var(--text-secondary)]">Password</label>
-                    <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full px-3 py-2 mt-1 text-[var(--text-primary)] bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md focus:ring-[var(--accent)] focus:border-[var(--accent)]" placeholder="••••••••">
+                    <div class="relative mt-1">
+                        <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full px-3 py-2 pr-10 text-[var(--text-primary)] bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md focus:ring-[var(--accent)] focus:border-[var(--accent)]" placeholder="••••••••">
+                        <button type="button" id="toggle-password-visibility" class="absolute inset-y-0 right-0 px-3 flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
                 <p id="login-error" class="text-sm text-red-400 hidden">Invalid email or password.</p>
                 <div>
@@ -78,62 +147,62 @@
         
         <!-- Sidebar Navigation -->
         <aside id="sidebar" class="bg-[var(--bg-secondary)] text-[var(--text-primary)] w-64 fixed inset-y-0 left-0 transform -translate-x-full lg:h-screen lg:sticky lg:top-0 lg:translate-x-0 transition-transform duration-300 ease-in-out z-30 flex flex-col">
-            <div class="p-5 border-b border-[var(--border-color)] flex items-center space-x-4">
+            <div class="p-5 border-b border-[var(--border-color)] flex items-center space-x-4 sidebar-header">
                 <img id="sidebar-logo" src="assets/logo.png" alt="Logo Hotel" class="h-13
 
                  w-auto">
             </div>
             <nav class="p-4 flex-1 overflow-y-auto">
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200 active" data-target="dashboard">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Dashboard</span>
                 </a>
                 
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="pelanggan">
-                    <i data-lucide="users" class="w-5 h-5 mr-3"></i> Pelanggan
+                    <i data-lucide="users" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Pelanggan</span>
                 </a>
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="agenda">
-                    <i data-lucide="calendar-check" class="w-5 h-5 mr-3"></i> Agenda Meeting
+                    <i data-lucide="calendar-check" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Agenda Meeting</span>
                 </a>
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="kalender">
-                    <i data-lucide="calendar" class="w-5 h-5 mr-3"></i> Kalender
+                    <i data-lucide="calendar" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Kalender</span>
                 </a>
-                <div class="mt-4 pt-4 border-t border-[var(--border-color)]">
+                <div class="mt-4 pt-4 border-t border-[var(--border-color)] sidebar-section-divider">
                     <h3 class="px-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Booking</h3>
                     <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="booking-kamar">
-                        <i data-lucide="bed-double" class="w-5 h-5 mr-3"></i> Booking Kamar
+                        <i data-lucide="bed-double" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Booking Kamar</span>
                     </a>
                     <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="booking-meeting">
-                        <i data-lucide="presentation" class="w-5 h-5 mr-3"></i> Booking Ruang Meeting
+                        <i data-lucide="presentation" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Banquet</span>
                     </a>
                 </div>
-                <div class="mt-4 pt-4 border-t border-[var(--border-color)]">
+                <div class="mt-4 pt-4 border-t border-[var(--border-color)] sidebar-section-divider">
                     <h3 class="px-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Keuangan & Laporan</h3>
                      <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="pembayaran">
-                        <i data-lucide="credit-card" class="w-5 h-5 mr-3"></i> Pembayaran
+                        <i data-lucide="credit-card" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Pembayaran</span>
                     </a>
                      <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="laporan">
-                        <i data-lucide="file-text" class="w-5 h-5 mr-3"></i> Laporan & Invoice
+                        <i data-lucide="file-text" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Invoice</span>
                     </a>
                     <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="laporan-sales">
-                        <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3"></i> Laporan Sales
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Laporan Sales</span>
                     </a>
                 </div>
-                <div id="manajemen-menu" class="mt-4 pt-4 border-t border-[var(--border-color)]">
+                <div id="manajemen-menu" class="mt-4 pt-4 border-t border-[var(--border-color)] sidebar-section-divider">
                     <h3 class="px-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Manajemen</h3>
-                    <a href="#" id="nav-manajemen-user" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-user"><i data-lucide="user-cog" class="w-5 h-5 mr-3"></i> User</a>
-                    <a href="#" id="nav-manajemen-target" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-target"><i data-lucide="target" class="w-5 h-5 mr-3"></i> Target</a>
+                    <a href="#" id="nav-manajemen-user" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-user"><i data-lucide="user-cog" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">User</span></a>
+                    <a href="#" id="nav-manajemen-target" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-target"><i data-lucide="target" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Target</span></a>
                     <a href="#" id="nav-manajemen-inventaris" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-inventaris">
-                        <i data-lucide="archive" class="w-5 h-5 mr-3"></i> Inventaris & Harga
+                        <i data-lucide="archive" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Seting Harga</span>
                     </a>
                      <a href="#" id="nav-manajemen-pengaturan" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-pengaturan">
-                        <i data-lucide="settings" class="w-5 h-5 mr-3"></i> Pengaturan
+                        <i data-lucide="settings" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Pengaturan</span>
                     </a>
                 </div>
             </nav>
             <!-- Logout Button -->
             <div class="p-4 mt-auto border-t border-[var(--border-color)]">
                 <button id="sidebar-logout-button" class="w-full flex items-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors duration-200">
-                    <i data-lucide="log-out" class="w-5 h-5 mr-3"></i> Logout
+                    <i data-lucide="log-out" class="w-5 h-5 mr-3 flex-shrink-0"></i> <span class="link-text flex-1 whitespace-nowrap">Logout</span>
                 </button>
             </div>
         </aside>
@@ -148,6 +217,10 @@
                     <h2 id="page-title" class="text-lg md:text-xl font-semibold text-[var(--text-primary)]">Dashboard</h2>
                 </div>
                 <div class="flex items-center space-x-2">
+                    <button id="theme-toggle-btn" class="p-2 rounded-full hover:bg-[var(--bg-hover)]" title="Ganti Tema">
+                        <i data-lucide="moon" class="w-5 h-5"></i>
+                    </button>
+
                     <div id="notification-container" class="relative hidden">
                         <button id="notification-toggle" class="p-2 rounded-full hover:bg-[var(--bg-hover)] relative">
                             <i data-lucide="bell" class="w-5 h-5"></i>
@@ -673,6 +746,22 @@
                             </div>
                         </div>
 
+                        <!-- Sales Report Summary -->
+                        <div id="sales-report-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 hidden">
+                            <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg">
+                                <p class="text-sm text-[var(--text-secondary)]">Total Pendapatan</p>
+                                <p id="sales-report-total-revenue" class="text-xl font-bold text-[var(--text-primary)]">Rp 0</p>
+                            </div>
+                            <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg">
+                                <p class="text-sm text-[var(--text-secondary)]">Total Booking</p>
+                                <p id="sales-report-total-bookings" class="text-xl font-bold text-[var(--text-primary)]">0</p>
+                            </div>
+                            <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg">
+                                <p class="text-sm text-[var(--text-secondary)]">Total Agenda</p>
+                                <p id="sales-report-total-agendas" class="text-xl font-bold text-[var(--text-primary)]">0</p>
+                            </div>
+                        </div>
+
                         <div id="sales-report-actions" class="flex items-center gap-4 mb-4 hidden">
                              <button id="print-sales-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm">
                                 <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Print PDF
@@ -680,24 +769,12 @@
                             <button id="export-sales-report-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm">
                                 <i data-lucide="sheet" class="w-4 h-4 mr-2"></i> Export Excel
                             </button>
-                            <!-- Gemini AI Summary Button -->
-                            <button id="generate-ai-summary-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm">
-                                <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i> Buat Ringkasan AI
-                            </button>
                         </div>
 
                         <div id="sales-report-container" class="overflow-x-auto">
                             <!-- Sales report table will be rendered here -->
                         </div>
                         
-                        <!-- AI Summary Container -->
-                        <div id="ai-summary-container" class="mt-8 hidden">
-                            <h4 class="text-lg font-semibold mb-4 flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i> Ringkasan Laporan AI</h4>
-                            <div id="ai-summary-content" class="p-6 bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] rounded-lg prose prose-sm max-w-none text-[var(--text-primary)]">
-                                <!-- AI summary will be rendered here -->
-                            </div>
-                        </div>
-
                         <!-- Agenda Report Container -->
                         <div id="sales-agenda-report-section" class="mt-8 hidden">
                              <h4 class="text-lg font-semibold mb-4 flex items-center"><i data-lucide="calendar-check" class="w-5 h-5 mr-2 text-blue-400"></i> Laporan Detail Agenda Meeting</h4>
@@ -797,19 +874,37 @@
 
     <!-- Agenda Modal -->
     <div id="agendaModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('agendaModal')">
-        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
-            <h3 id="agendaModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Agenda Baru</h3>
-            <form id="formAgenda" class="space-y-4">
-                <input type="hidden" id="agenda-id">
-                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Judul Meeting</label><input type="text" id="agenda-judul" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Pelanggan</label><select id="agenda-pelanggan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih --</option></select></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tipe Agenda</label><select id="agenda-tipe" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih Tipe --</option></select></div></div>
-                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tanggal</label><input type="date" id="agenda-tanggal" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Mulai</label><input type="time" id="agenda-jam-mulai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Selesai</label><input type="time" id="agenda-jam-selesai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div></div>
-                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Lokasi</label><div class="flex items-center space-x-2"><input type="text" id="agenda-lokasi" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Koordinat GPS atau nama tempat"><button type="button" id="get-gps-location" class="p-2 bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)]"><i data-lucide="map-pin" class="w-5 h-5 text-white"></i></button></div></div>
-                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan</label><textarea id="agenda-catatan" rows="2" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></textarea></div>
-                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Upload Foto (Opsional)</label><input type="file" id="agenda-foto-upload" accept="image/*" class="w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:bg-[var(--accent-hover)]"><img id="agenda-foto-preview" src="#" alt="Preview Foto Agenda" class="mt-4 rounded-lg max-h-40 hidden"></div>
-                <div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('agendaModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div>
-            </form>
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl w-full max-w-4xl transform scale-95 flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-[var(--border-color)] flex-shrink-0">
+                <h3 id="agendaModalTitle" class="text-lg sm:text-xl font-semibold">Tambah Agenda Baru</h3>
+            </div>
+            <!-- Modal Body (Scrollable) -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="formAgenda" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <input type="hidden" id="agenda-id">
+                    <!-- Left Column -->
+                    <div class="space-y-4">
+                        <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Judul Meeting</label><input type="text" id="agenda-judul" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Pelanggan</label><select id="agenda-pelanggan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih --</option></select></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tipe Agenda</label><select id="agenda-tipe" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih Tipe --</option></select></div></div>
+                        <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tanggal</label><input type="date" id="agenda-tanggal" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
+                        <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Mulai</label><input type="time" id="agenda-jam-mulai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Selesai</label><input type="time" id="agenda-jam-selesai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div></div>
+                        <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan</label><textarea id="agenda-catatan" rows="4" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></textarea></div>
+                    </div>
+                    <!-- Right Column -->
+                    <div class="space-y-4">
+                        <label class="block text-sm text-[var(--text-secondary)] mb-2">Lokasi</label>
+                        <div class="flex items-center space-x-2 mb-2"><input type="text" id="agenda-lokasi" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Koordinat GPS atau nama tempat"><button type="button" id="get-gps-location" class="p-2 bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)]"><i data-lucide="map-pin" class="w-5 h-5 text-white"></i></button></div>
+                        <div id="agenda-map-container" class="w-full h-48 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]"></div>
+                        <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Upload Foto (Opsional)</label><input type="file" id="agenda-foto-upload" accept="image/*" class="w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:bg-[var(--accent-hover)]"><img id="agenda-foto-preview" src="#" alt="Preview Foto Agenda" class="mt-4 rounded-lg max-h-40 hidden"></div>
+                    </div>
+                </form>
+            </div>
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-[var(--border-color)] flex justify-end space-x-4 flex-shrink-0">
+                <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('agendaModal')">Batal</button>
+                <button type="submit" form="formAgenda" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button>
+            </div>
         </div>
     </div>
 
@@ -946,15 +1041,28 @@
         </div>
     </div>
 
-    <!-- Gemini AI Modal & Event Detail Modal -->
-    <div id="geminiModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('geminiModal')">
-        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
-            <h3 id="geminiModalTitle" class="text-lg sm:text-xl font-semibold mb-6 flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i> Asisten AI</h3>
-            <div id="geminiModalContent" class="space-y-4">
-                <!-- Content for Gemini features will be injected here -->
+    <!-- Payment History Modal -->
+    <div id="paymentHistoryModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[60] hidden items-center justify-center opacity-0" onclick="closeModal('paymentHistoryModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-2xl transform scale-95" onclick="event.stopPropagation()">
+            <h3 id="paymentHistoryModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Riwayat Pembayaran</h3>
+            <div id="paymentHistoryContent" class="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                <!-- Payment history items will be rendered here -->
             </div>
-            <div class="flex justify-end space-x-4 pt-6">
-                <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('geminiModal')">Tutup</button>
+            <div class="flex justify-end pt-6 mt-4 border-t border-[var(--border-color)]">
+                <button type="button" class="px-6 py-2 rounded-md text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:bg-[var(--border-color)] font-semibold" onclick="closeModal('paymentHistoryModal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proof Modal -->
+    <div id="proofModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[70] hidden items-center justify-center opacity-0" onclick="closeModal('proofModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-6 w-full max-w-xl transform scale-95" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-semibold mb-4">Bukti Pembayaran</h3>
+            <div class="bg-[var(--bg-primary)] p-2 rounded-md">
+                <img id="proofModalImage" src="" alt="Bukti Pembayaran" class="rounded-md max-w-full h-auto mx-auto max-h-[70vh]">
+            </div>
+            <div class="flex justify-end pt-6">
+                <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('proofModal')">Tutup</button>
             </div>
         </div>
     </div>

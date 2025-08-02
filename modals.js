@@ -1,4 +1,3 @@
-import { db } from '../core/state.js';
 import { initializeAgendaMap, updateMapAndMarker } from '../features/agenda.js';
 
 let agendaMap = null;
@@ -39,9 +38,10 @@ export function closeModal(modalId) {
     }
 };
 
-export function openPelangganModal(id = null) {
+export function openPelangganModal(db, id = null) {
     const form = document.getElementById('formTambahPelanggan'); form.reset();
-    const title = document.getElementById('pelangganModalTitle'), idInput = document.getElementById('pelanggan-id');
+    const title = document.getElementById('pelangganModalTitle');
+    const idInput = document.getElementById('pelanggan-id');
     if (id) {
         const p = db.pelanggan.find(cust => cust.id === id);
         if (p) {
@@ -57,9 +57,10 @@ export function openPelangganModal(id = null) {
     openModal('pelangganModal');
 }
 
-export function openAgendaModal(id = null) {
+export function openAgendaModal(db, id = null) {
     const form = document.getElementById('formAgenda'); form.reset();
-    const title = document.getElementById('agendaModalTitle'), idInput = document.getElementById('agenda-id');
+    const title = document.getElementById('agendaModalTitle');
+    const idInput = document.getElementById('agenda-id');
     const fotoUpload = document.getElementById('agenda-foto-upload');
     const fotoPreview = document.getElementById('agenda-foto-preview');
     fotoUpload.value = '';
