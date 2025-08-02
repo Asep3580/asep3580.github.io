@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- GLOBAL STATE & DATABASE ---
     let db = {};
     let currentUser = null;
+    let pelangganSort = { key: 'nama', order: 'asc' };
+    let agendaMap = null;
+    let agendaMarker = null;
     let salesTargetChartInstance = null;
-    let salespersonChartInstance = null;
-    let segmentChartInstance = null;
-    let lastRoomBookingId = null; 
+    let bookingTypeChartInstance = null;
+    let segmentTargetChartInstance = null;
+    let lastRoomBookingId = null;
     let currentSalesReportData = [];
+    let lastMeetingBookingId = null;
     let calendar = null;
     const now = new Date('2025-07-29T11:58:00'); // Set specific date for demo consistency
 
@@ -16,28 +20,30 @@ document.addEventListener('DOMContentLoaded', function() {
             { id: 2, nama: 'Ani Wijaya', perusahaan: '-', email: 'ani.wijaya@gmail.com', telepon: '089876543210', alamat: 'Jl. Gatot Subroto No. 12, Bandung', segmentasi: 'Individual' }
         ],
         agenda: [
-            { id: 1, judul: 'Follow Up Penawaran Event', pelangganId: 1, tanggal: '2025-07-29', jamMulai: '10:00', jamSelesai: '11:00', catatan: 'Meeting di lobi', status: 'Definite', tipe: 'visit', lokasi: '-6.917464, 107.619125' },
-            { id: 2, judul: 'Presentasi Paket Wedding', pelangganId: 2, tanggal: '2025-07-29', jamMulai: '14:00', jamSelesai: '15:30', catatan: 'Ruang Jasmine', status: 'Tentative', tipe: 'telemarketing', lokasi: 'Kantor Klien' }
+            { id: 1, judul: 'Follow Up Penawaran Event', pelangganId: 1, tanggal: '2025-07-29', jamMulai: '10:00', jamSelesai: '11:00', catatan: 'Meeting di lobi', status: 'Definite', tipe: 'Visit Sales Call', lokasi: '-6.917464, 107.619125', fotoUrl: null, createdBy: 1 },
+            { id: 2, judul: 'Presentasi Paket Wedding', pelangganId: 2, tanggal: '2025-07-29', jamMulai: '14:00', jamSelesai: '15:30', catatan: 'Ruang Jasmine', status: 'Tentative', tipe: 'Telemarketing', lokasi: 'Kantor Klien', fotoUrl: null, createdBy: 1 }
         ],
         kamarBookings: [
-             { id: 'BK-1721800000000', tipeBooking: 'Kamar', pelangganId: 1, tanggalBooking: '2025-07-24T10:00:00.000Z', checkin: '2025-07-28', checkout: '2025-07-30', totalHarga: 5000000, status: 'Terkonfirmasi', rooms: [{type: 'deluxe', name: 'Deluxe Room', count: 1, basePrice: 1100000, package: 'breakfast', guests: 2}, {type: 'suite', name: 'Executive Suite', count: 1, basePrice: 2200000, package: 'room_only', guests: 1}], createdBy: 1 }
+             { id: 'BK-1721800000000', tipeBooking: 'Kamar', pelangganId: 1, tanggalBooking: '2025-07-24T10:00:00.000Z', checkin: '2025-07-28', checkout: '2025-07-30', totalHarga: 5000000, status: 'Terkonfirmasi', rooms: [{type: 'deluxe', name: 'Deluxe Room', count: 1, basePrice: 1100000, package: 'breakfast', guests: 2}, {type: 'suite', name: 'Executive Suite', count: 1, basePrice: 2200000, package: 'room_only', guests: 1}], createdBy: 1, cancellationReason: null, cancelledBy: null }
         ],
         meetingBookings: [
-            { id: 'BM-1721900000000', tipeBooking: 'Meeting', pelangganId: 2, tanggalBooking: '2025-07-25T11:00:00.000Z', tanggalMulai: '2025-07-29', tanggalBerakhir: '2025-07-29', jamMulai: '09:00', jamBerakhir: '17:00', totalHarga: 4500000, status: 'Terkonfirmasi', roomKey: 'jasmine', createdBy: 1 }
+            { id: 'BM-1721900000000', tipeBooking: 'Meeting', pelangganId: 2, tanggalBooking: '2025-07-25T11:00:00.000Z', tanggalMulai: '2025-07-29', tanggalBerakhir: '2025-07-29', jamMulai: '09:00', jamBerakhir: '17:00', totalHarga: 5445000, status: 'Terkonfirmasi', roomKey: 'jasmine', packageKey: 'fullday', jumlahPax: 10, createdBy: 1, cancellationReason: null, cancelledBy: null }
         ],
         payments: [
-            { id: 1, bookingId: 'BK-1721800000000', tanggal: '2025-07-25', jumlah: 2500000, metode: 'Transfer Bank', tipe: 'DP', catatan: 'DP 50%', createdBy: 1 }
+            { id: 1, bookingId: 'BK-1721800000000', tanggal: '2025-07-25', jumlah: 2500000, metode: 'Transfer Bank', tipe: 'DP', catatan: 'DP 50%', createdBy: 1, proofUrl: null, verified: false, verifiedBy: null, verificationNote: null }
         ],
         roomTypes: {
             "deluxe": { 
                 name: "Deluxe Room", 
                 prices: { individual: 1250000, corporate: 1100000, "travel-agent": 1000000, government: 1050000 },
-                breakfastPrice: 150000 
+                breakfastPrice: 150000,
+                priceHistory: []
             },
             "suite": { 
                 name: "Executive Suite", 
                 prices: { individual: 2500000, corporate: 2200000, "travel-agent": 2000000, government: 2100000 },
-                breakfastPrice: 200000 
+                breakfastPrice: 200000,
+                priceHistory: []
             }
         },
         meetingPackages: {
@@ -50,14 +56,29 @@ document.addEventListener('DOMContentLoaded', function() {
             "rose": { name: "Rose Ballroom (100 pax)", rentalPrice: 5000000 }
         },
         users: [ 
-            { id: 1, name: 'Siti Saleha', email: 'sales@hotel.com', role: 'Sales', password: 'password123' },
-            { id: 2, name: 'Admin Hotel', email: 'gm@hotel.com', role: 'Admin', password: 'password123' },
+            { id: 1, name: 'Siti Saleha', email: 'siti@hotel.com', role: 'Sales', password: 'password123' },
+            { id: 2, name: 'Admin Hotel', email: 'admin@hotel.com', role: 'Admin', password: 'password123' },
             { id: 3, name: 'Developer', email: 'dev@hotel.com', role: 'Admin', password: 'devpassword' }
         ],
         targets: {
-            "2025-07": 200 // Target 200 Juta untuk Juli 2025
+            "2025-07": {
+                overall: 200000000, // Target 200 Juta
+                sales: { "1": 75000000 }, // Target 75 Juta untuk user dengan id 1 (Siti Saleha)
+                segments: {
+                    "Corporate": 100000000,
+                    "Individual": 20000000,
+                    "Travel Agent": 50000000,
+                    "Government": 30000000
+                }
+            }
         },
         settings: {
+            companyProfile: {
+                name: 'CRM Hotel Anda',
+                logoUrl: 'https://www.smartsalescrm.com/assets/images/logo/smart-sales-crm-software-logo.png',
+                phone: '021-1234-5678',
+                address: 'Jl. CRM Sejahtera No. 1, Jakarta, Indonesia'
+            },
             taxAndServicePercentage: 21,
             invoiceSettings: {
                 logoUrl: 'https://crm.kagum-hotel.com/images/kagum-logo.png',
@@ -67,20 +88,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Sales': {
                     'dashboard': true, 'kalender': true, 'pelanggan': true, 'agenda': true,
                     'booking-kamar': true, 'booking-meeting': true, 'pembayaran': true, 'laporan': true, 'laporan-sales': true,
-                    'manajemen-user': false, 'manajemen-inventaris': false, 'manajemen-pengaturan': false
+                    'manajemen-user': false, 'manajemen-inventaris': false, 'manajemen-pengaturan': false, 'manajemen-target': false,
+                    'can_verify_payment': false
                 },
                 'Manager': {
                     'dashboard': true, 'kalender': true, 'pelanggan': true, 'agenda': true,
                     'booking-kamar': true, 'booking-meeting': true, 'pembayaran': true, 'laporan': true, 'laporan-sales': true,
-                    'manajemen-user': false, 'manajemen-inventaris': true, 'manajemen-pengaturan': false
+                    'manajemen-user': false, 'manajemen-inventaris': true, 'manajemen-pengaturan': true, 'manajemen-target': true,
+                    'can_verify_payment': true
+                },
+                'Accounting': {
+                    'dashboard': true, 'kalender': true, 'pelanggan': true, 'agenda': false,
+                    'booking-kamar': false, 'booking-meeting': false, 'pembayaran': true, 'laporan': true, 'laporan-sales': true,
+                    'manajemen-user': false, 'manajemen-inventaris': false, 'manajemen-pengaturan': false, 'manajemen-target': false,
+                    'can_verify_payment': true
                 },
                 'Admin': {
                     'dashboard': true, 'kalender': true, 'pelanggan': true, 'agenda': true,
                     'booking-kamar': true, 'booking-meeting': true, 'pembayaran': true, 'laporan': true, 'laporan-sales': true,
-                    'manajemen-user': true, 'manajemen-inventaris': true, 'manajemen-pengaturan': true
+                    'manajemen-user': true, 'manajemen-inventaris': true, 'manajemen-pengaturan': true, 'manajemen-target': true,
+                    'can_verify_payment': true
                 }
             }
-        }
+        },
+        agendaTypes: [
+            { id: 1, name: 'Telemarketing' },
+            { id: 2, name: 'Visit Sales Call' }
+        ],
+        notifications: []
     };
 
     // --- GEMINI API INTEGRATION ---
@@ -137,55 +172,69 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadData() {
         const savedData = localStorage.getItem('hotelCrmData');
         db = savedData ? JSON.parse(savedData) : JSON.parse(JSON.stringify(initialDb));
+        
+        // --- Data Migration & Defaulting ---
+        // Ensure settings object exists
         if (!db.settings) {
             db.settings = JSON.parse(JSON.stringify(initialDb.settings));
         }
-        if (!db.payments) { // Ensure payments array exists
-            db.payments = [];
+        if (!db.settings.companyProfile) {
+            db.settings.companyProfile = JSON.parse(JSON.stringify(initialDb.settings.companyProfile));
         }
-        // Ensure rolePermissions exists
+        // Ensure nested settings objects exist
+        if (!db.settings.invoiceSettings) {
+            db.settings.invoiceSettings = JSON.parse(JSON.stringify(initialDb.settings.invoiceSettings));
+        }
         if (!db.settings.rolePermissions) {
              db.settings.rolePermissions = JSON.parse(JSON.stringify(initialDb.settings.rolePermissions));
+        } else {
+            // Ensure all default roles exist in the loaded data.
+            // This handles adding new roles to existing localStorage data.
+            for (const role in initialDb.settings.rolePermissions) {
+                if (!db.settings.rolePermissions[role]) { // If role doesn't exist, copy it entirely
+                    db.settings.rolePermissions[role] = JSON.parse(JSON.stringify(initialDb.settings.rolePermissions[role]));
+                } else { // If role exists, check for and add missing permission keys
+                    for (const perm in initialDb.settings.rolePermissions[role]) {
+                        if (db.settings.rolePermissions[role][perm] === undefined) {
+                            db.settings.rolePermissions[role][perm] = initialDb.settings.rolePermissions[role][perm];
+                        }
+                    }
+                }
+            }
         }
-    }
 
-    // --- THEME LOGIC ---
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeMenu = document.getElementById('theme-menu');
-    const themeOptions = document.querySelectorAll('.theme-option');
-
-    function setTheme(themeName) {
-        document.documentElement.setAttribute('data-theme', themeName);
-        localStorage.setItem('theme', themeName);
-        if (currentUser) {
-            renderAllCharts();
+        // Ensure other top-level arrays exist
+        if (!db.payments) {
+            db.payments = [];
         }
-        if (calendar) {
-            calendar.render(); // Re-render calendar to apply theme
+        if (!db.agendaTypes) {
+            db.agendaTypes = JSON.parse(JSON.stringify(initialDb.agendaTypes));
         }
+        if (!db.notifications) {
+            db.notifications = [];
+        }
+        // Data migration for targets from old format (number) to new format (object)
+        if (db.targets) {
+            for (const key in db.targets) {
+                // If it's an old number-based target, convert it completely.
+                if (typeof db.targets[key] === 'number' || db.targets[key] === null) {
+                    const oldTargetValue = db.targets[key] || 0;
+                    db.targets[key] = {
+                        overall: oldTargetValue * 1000000, // Assuming old value was in millions
+                        sales: {},
+                        segments: {}
+                    };
+                    continue; // Move to the next key
+                }
+                // For object-based targets, ensure all sub-objects exist.
+                if (typeof db.targets[key] === 'object' && db.targets[key] !== null) {
+                    if (typeof db.targets[key].sales === 'undefined') { db.targets[key].sales = {}; }
+                    if (typeof db.targets[key].segments === 'undefined') { db.targets[key].segments = {}; }
+                }
+            }
+        }
+
     }
-
-    function loadTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'dark-blue';
-        setTheme(savedTheme);
-    }
-
-    themeToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        themeMenu.classList.toggle('hidden');
-    });
-
-    document.addEventListener('click', () => {
-        themeMenu.classList.add('hidden');
-    });
-
-    themeOptions.forEach(option => {
-        option.addEventListener('click', (e) => {
-            e.preventDefault();
-            setTheme(e.target.dataset.theme);
-        });
-    });
-
 
     // --- AUTH & SESSION ---
     const loginContainer = document.getElementById('login-container');
@@ -238,6 +287,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Handle the inventory dropdown menu
+        const inventarisMenuLink = document.getElementById('nav-manajemen-inventaris');
+        if (inventarisMenuLink) {
+            if (permissions['manajemen-inventaris']) {
+                inventarisMenuLink.style.display = 'flex';
+                canManage = true;
+            } else {
+                inventarisMenuLink.style.display = 'none';
+            }
+        }
+
         // Hide the "Manajemen" header if no management links are visible
         const manajemenMenu = document.getElementById('manajemen-menu');
         if (manajemenMenu) {
@@ -255,8 +315,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('user-role-display').textContent = user.role;
 
         applyRolePermissions(user.role);
-
+        checkAndCreateAgendaReminders(); // Check for agenda reminders
+        checkAndCreatePaymentReminders(); // Check for reminders on app load
+        
         renderAll();
+        renderNotifications(); // Call it here to set initial state
         initializeCalendar();
     }
 
@@ -276,11 +339,14 @@ document.addEventListener('DOMContentLoaded', function() {
             errorEl.classList.remove('hidden');
         }
     });
-
-    document.getElementById('logout-button').addEventListener('click', function() {
+    
+    function logout() {   
         sessionStorage.removeItem('loggedInUserId');
+        currentUser = null;
         location.reload();
-    });
+    }
+
+    document.getElementById('sidebar-logout-button').addEventListener('click', logout);
 
     // --- UI/UX FUNCTIONS ---
     function showToast(message, type = 'success') {
@@ -300,6 +366,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
     }
 
+    function formatCompactCurrency(number) {
+        if (number >= 1_000_000_000) {
+            return (number / 1_000_000_000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' Miliar';
+        }
+        if (number >= 1_000_000) {
+            return (number / 1_000_000).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' Juta';
+        }
+        if (number >= 1_000) {
+            return (number / 1_000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' Ribu';
+        }
+        return number.toString();
+    }
+
     function formatPhoneNumberForWhatsApp(phone) {
         let formattedPhone = phone.replace(/[^0-9]/g, '');
         if (formattedPhone.startsWith('0')) {
@@ -316,21 +395,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>`;
     }
     
-    function getAgendaBadges(item) {
+    function getAgendaTipeBadge(tipe) {
+        const baseClasses = "text-xs font-semibold px-2.5 py-1 rounded-full flex items-center";
+        if (!tipe) return '';
+        const tipeLower = tipe.toLowerCase();
+
+        if (tipeLower.includes('visit')) {
+            return `<span class="bg-blue-500/20 text-blue-400 ${baseClasses}"><i data-lucide="map-pin" class="w-3 h-3 mr-1.5"></i>${tipe}</span>`;
+        }
+        if (tipeLower.includes('telemarketing') || tipeLower.includes('call')) {
+            return `<span class="bg-purple-500/20 text-purple-400 ${baseClasses}"><i data-lucide="phone" class="w-3 h-3 mr-1.5"></i>${tipe}</span>`;
+        }
+        if (tipeLower.includes('email')) {
+            return `<span class="bg-green-500/20 text-green-400 ${baseClasses}"><i data-lucide="mail" class="w-3 h-3 mr-1.5"></i>${tipe}</span>`;
+        }
+        // Default badge
+        return `<span class="bg-gray-500/20 text-gray-400 ${baseClasses}"><i data-lucide="tag" class="w-3 h-3 mr-1.5"></i>${tipe}</span>`;
+    }
+
+    function getAgendaStatusBadge(status) {
         const baseClasses = "text-xs font-semibold px-2.5 py-1 rounded-full";
-        let statusBadge = '';
-        let tipeBadge = '';
-
-        switch (item.status) {
-            case 'Definite': statusBadge = `<span class="bg-green-500/20 text-green-400 ${baseClasses}">Definite</span>`; break;
-            case 'Tentative': statusBadge = `<span class="bg-yellow-500/20 text-yellow-400 ${baseClasses}">Tentative</span>`; break;
+        switch (status) {
+            case 'Definite': return `<span class="bg-green-500/20 text-green-400 ${baseClasses}">Definite</span>`;
+            case 'Tentative': return `<span class="bg-yellow-500/20 text-yellow-400 ${baseClasses}">Tentative</span>`;
+            default: return '';
         }
-
-        switch (item.tipe) {
-            case 'visit': tipeBadge = `<span class="bg-blue-500/20 text-blue-400 ${baseClasses} flex items-center"><i data-lucide="map-pin" class="w-3 h-3 mr-1.5"></i>Visit</span>`; break;
-            case 'telemarketing': tipeBadge = `<span class="bg-purple-500/20 text-purple-400 ${baseClasses} flex items-center"><i data-lucide="phone" class="w-3 h-3 mr-1.5"></i>Telemarketing</span>`; break;
-        }
-        return `<div class="flex items-center gap-2">${tipeBadge}${statusBadge}</div>`;
     }
 
     function getSegmentasiBadge(segmentasi) {
@@ -349,6 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (role) {
             case 'Admin': return `<span class="bg-red-500/20 text-red-400 ${baseClasses}">Admin</span>`;
             case 'Manager': return `<span class="bg-yellow-500/20 text-yellow-400 ${baseClasses}">Manager</span>`;
+            case 'Accounting': return `<span class="bg-cyan-500/20 text-cyan-400 ${baseClasses}">Accounting</span>`;
             case 'Sales': return `<span class="bg-blue-500/20 text-blue-400 ${baseClasses}">Sales</span>`;
             default: return '';
         }
@@ -365,19 +455,61 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function timeAgo(date) {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " tahun lalu";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " bulan lalu";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " hari lalu";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " jam lalu";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " menit lalu";
+        return "Baru saja";
+    }
+
+    function updateGlobalLogo(logoUrl) {
+        const defaultLogo = 'https://www.smartsalescrm.com/assets/images/logo/smart-sales-crm-software-logo.png';
+        const finalLogoUrl = logoUrl || defaultLogo;
+
+        const loginLogo = document.getElementById('login-logo');
+        const sidebarLogo = document.getElementById('sidebar-logo');
+
+        if (loginLogo) loginLogo.src = finalLogoUrl;
+        if (sidebarLogo) sidebarLogo.src = finalLogoUrl;
+    }
+
+    function updatePageTitle(companyName) {
+        const baseTitle = 'CRM Hotel';
+        if (companyName) {
+            document.title = `${companyName} - ${baseTitle}`;
+        } else {
+            document.title = `${baseTitle} by Asep Suhendar`; // Fallback to original title
+        }
+    }
+
     // --- RENDER FUNCTIONS ---
     function renderAll() {
         renderPelangganTable();
-        renderInventarisTables();
+        renderInventarisKamarTable();
+        renderInventarisMeetingRoomTable();
+        renderInventarisPaketMeetingTable();
         renderLaporanTable();
         renderPembayaranTable();
         renderAgenda();
+    renderDashboardAgendaList();
         renderUserTable();
         renderSettingsForms();
         populateAllDropdowns();
+        populateSalesFilterDropdown();
+        populatePembayaranSalesFilter();
         updateDashboardCards();
         renderAllCharts();
+        renderNotifications();
         if (calendar) {
+            renderIndividualSalesTargets();
             populateCalendar();
         }
         lucide.createIcons();
@@ -385,7 +517,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderPelangganTable(filter = '') {
         const container = document.getElementById('pelanggan-table-container');
-        const filteredPelanggan = db.pelanggan.filter(p => 
+
+        // 1. Sort the data based on the global sort state
+        const sortedPelanggan = [...db.pelanggan].sort((a, b) => {
+            const key = pelangganSort.key;
+            const order = pelangganSort.order;
+            
+            // Handle cases where the key might not exist or is a placeholder
+            const valA = (a[key] && a[key] !== '-') ? a[key] : '';
+            const valB = (b[key] && b[key] !== '-') ? b[key] : '';
+
+            if (order === 'asc') {
+                return valA.localeCompare(valB, 'id-ID', { sensitivity: 'base' });
+            } else {
+                return valB.localeCompare(valA, 'id-ID', { sensitivity: 'base' });
+            }
+        });
+
+        // 2. Filter the sorted data
+        const filteredPelanggan = sortedPelanggan.filter(p => 
             p.nama.toLowerCase().includes(filter.toLowerCase()) || 
             (p.perusahaan && p.perusahaan.toLowerCase().includes(filter.toLowerCase())) ||
             p.email.toLowerCase().includes(filter.toLowerCase())
@@ -398,17 +548,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
+
+        // 3. Helper function to create sort indicator icons
+        const getSortIcon = (key) => {
+            if (pelangganSort.key !== key) {
+                return '<i data-lucide="arrow-up-down" class="w-3 h-3 ml-2 text-[var(--text-secondary)] opacity-50"></i>';
+            }
+            if (pelangganSort.order === 'asc') {
+                return '<i data-lucide="arrow-up" class="w-4 h-4 ml-2 text-[var(--accent)]"></i>';
+            }
+            return '<i data-lucide="arrow-down" class="w-4 h-4 ml-2 text-[var(--accent)]"></i>';
+        };
+
+        // 4. Build the table with sortable headers
         let tableHtml = `<table class="w-full text-left">
-                                    <thead><tr class="border-b border-[var(--border-color)]"><th class="p-3">Nama</th><th class="p-3">Perusahaan</th><th class="p-3">Segmentasi</th><th class="p-3">Alamat</th><th class="p-3">Telepon</th><th class="p-3">Aksi</th></tr></thead>
-                                    <tbody>`;
+                            <thead>
+                                <tr class="border-b border-[var(--border-color)]">
+                                    <th class="p-3 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors" data-sort="nama"><div class="flex items-center">Nama ${getSortIcon('nama')}</div></th>
+                                    <th class="p-3 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors" data-sort="perusahaan"><div class="flex items-center">Perusahaan ${getSortIcon('perusahaan')}</div></th>
+                                    <th class="p-3">Segmentasi</th>
+                                    <th class="p-3">Alamat</th>
+                                    <th class="p-3">Telepon</th>
+                                    <th class="p-3">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
 
         filteredPelanggan.forEach(p => {
             const waNumber = formatPhoneNumberForWhatsApp(p.telepon);
             let aksiHtml = `<td class="p-3 flex space-x-1">
-                                                <button onclick="openWhatsAppModal(${p.id})" title="Buat Pesan WhatsApp" class="p-2 text-purple-400 hover:text-purple-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="message-square-plus" class="w-4 h-4"></i></button>
-                                                <button onclick="openPelangganModal(${p.id})" title="Edit Pelanggan" class="p-2 text-yellow-400 hover:text-yellow-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                                                ${canManage ? `<button onclick="confirmDelete('pelanggan', ${p.id})" title="Hapus Pelanggan" class="p-2 text-red-500 hover:text-red-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
-                                            </td>`;
+                                <button onclick="openWhatsAppModal(${p.id})" title="Buat Pesan WhatsApp" class="p-2 text-purple-400 hover:text-purple-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="message-square-plus" class="w-4 h-4"></i></button>
+                                <button onclick="openPelangganModal(${p.id})" title="Edit Pelanggan" class="p-2 text-yellow-400 hover:text-yellow-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                                ${canManage ? `<button onclick="confirmDelete('pelanggan', ${p.id})" title="Hapus Pelanggan" class="p-2 text-red-500 hover:text-red-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                            </td>`;
 
             tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                 <td class="p-3">${p.nama}</td>
@@ -427,6 +599,23 @@ document.addEventListener('DOMContentLoaded', function() {
         tableHtml += `</tbody></table>`;
         container.innerHTML = tableHtml;
         lucide.createIcons();
+
+        // 5. Add event listeners for sorting
+        container.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const newKey = th.dataset.sort;
+                if (pelangganSort.key === newKey) {
+                    // Toggle the order if the same key is clicked
+                    pelangganSort.order = pelangganSort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // Otherwise, set new key and default to 'asc'
+                    pelangganSort.key = newKey;
+                    pelangganSort.order = 'asc';
+                }
+                // Re-render the table with the new sort settings
+                renderPelangganTable(document.getElementById('pelanggan-search').value);
+            });
+        });
     }
     
     function renderUserTable() {
@@ -455,20 +644,37 @@ document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
     }
     
-    function renderInventarisTables() {
+    function renderInventarisKamarTable() {
         const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
         const kamarContainer = document.getElementById('inventaris-kamar-table-container');
         let kamarTableHtml = '';
         if (Object.keys(db.roomTypes).length > 0) {
-            kamarTableHtml = `<div class="overflow-x-auto"><table class="w-full text-left"><thead><tr class="border-b border-[var(--border-color)]"><th class="p-3">Tipe Kamar</th><th class="p-3">Corporate</th><th class="p-3">Aksi</th></tr></thead><tbody>`;
+            kamarTableHtml = `<div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-[var(--border-color)]">
+                        <th class="p-3">Tipe Kamar</th>
+                        <th class="p-3 text-right">Individual</th>
+                        <th class="p-3 text-right">Corporate</th>
+                        <th class="p-3 text-right">Travel Agent</th>
+                        <th class="p-3 text-right">Government</th>
+                        <th class="p-3 text-right">Sarapan/Pax</th>
+                        <th class="p-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>`;
             for(const key in db.roomTypes) {
                 const room = db.roomTypes[key];
-                kamarTableHtml += `<tr class="border-b border-[var(--border-color)]">
+                kamarTableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                     <td class="p-3 font-semibold">${room.name}</td>
-                    <td class="p-3">${formatCurrency(room.prices.corporate)}</td>
-                    <td class="p-3 flex space-x-2">
-                        <button onclick="openKamarModal('${key}')" class="p-2 text-yellow-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                        ${canManage ? `<button onclick="confirmDelete('kamar', '${key}')" class="p-2 text-red-500 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                    <td class="p-3 text-right">${formatCurrency(room.prices.individual)}</td>
+                    <td class="p-3 text-right">${formatCurrency(room.prices.corporate)}</td>
+                    <td class="p-3 text-right">${formatCurrency(room.prices['travel-agent'])}</td>
+                    <td class="p-3 text-right">${formatCurrency(room.prices.government)}</td>
+                    <td class="p-3 text-right">${formatCurrency(room.breakfastPrice)}</td>
+                    <td class="p-3 flex justify-center space-x-2">
+                        <button onclick="openPriceHistoryModal('${key}')" title="Riwayat Harga" class="p-2 text-blue-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="history" class="w-4 h-4"></i></button>
+                        <button onclick="openKamarModal('${key}')" title="Edit Harga" class="p-2 text-yellow-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                        ${canManage ? `<button onclick="confirmDelete('kamar', '${key}')" title="Hapus Tipe Kamar" class="p-2 text-red-500 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                     </td>
                 </tr>`;
             }
@@ -477,7 +683,11 @@ document.addEventListener('DOMContentLoaded', function() {
             kamarTableHtml = getEmptyState('Belum ada tipe kamar yang ditambahkan.');
         }
         kamarContainer.innerHTML = kamarTableHtml;
+        lucide.createIcons();
+    }
 
+    function renderInventarisMeetingRoomTable() {
+        const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
         const meetingContainer = document.getElementById('inventaris-meeting-table-container');
         let meetingTableHtml = '';
         if (Object.keys(db.meetingRooms).length > 0) {
@@ -491,7 +701,11 @@ document.addEventListener('DOMContentLoaded', function() {
             meetingTableHtml = getEmptyState('Belum ada ruang meeting yang ditambahkan.');
         }
         meetingContainer.innerHTML = meetingTableHtml;
-        
+        lucide.createIcons();
+    }
+
+    function renderInventarisPaketMeetingTable() {
+        const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
         const paketMeetingContainer = document.getElementById('inventaris-paket-meeting-table-container');
         let paketMeetingTableHtml = '';
         if (Object.keys(db.meetingPackages).length > 0) {
@@ -517,7 +731,6 @@ document.addEventListener('DOMContentLoaded', function() {
             paketMeetingTableHtml = getEmptyState('Belum ada paket meeting yang ditambahkan.');
         }
         paketMeetingContainer.innerHTML = paketMeetingTableHtml;
-
         lucide.createIcons();
     }
 
@@ -533,9 +746,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (filteredBookings.length === 0) {
             container.innerHTML = getEmptyState(filter ? 'Tidak ada booking yang cocok.' : 'Belum ada transaksi booking.');
+            // Also clear the totals if no data
+            document.getElementById('laporan-total-pendapatan').textContent = formatCurrency(0);
+            document.getElementById('laporan-total-dibayar').textContent = formatCurrency(0);
+            document.getElementById('laporan-total-sisa').textContent = formatCurrency(0);
             lucide.createIcons();
             return;
         }
+
+        // Calculate totals based on filtered bookings
+        let totalPendapatan = 0;
+        let totalDibayar = 0;
+        let totalSisa = 0;
+
+        filteredBookings.forEach(b => {
+            totalPendapatan += b.totalHarga;
+            const paymentInfo = getPaymentInfo(b.id);
+            totalDibayar += paymentInfo.totalVerifiedPaid;
+            totalSisa += paymentInfo.balance;
+        });
+
+        // Render totals
+        document.getElementById('laporan-total-pendapatan').textContent = formatCurrency(totalPendapatan);
+        document.getElementById('laporan-total-dibayar').textContent = formatCurrency(totalDibayar);
+        document.getElementById('laporan-total-sisa').textContent = formatCurrency(totalSisa);
 
         const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
         let tableHtml = `<table class="w-full text-left text-sm">
@@ -543,6 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <tr class="border-b border-[var(--border-color)]">
                                     <th class="p-3">ID Booking</th>
                                     <th class="p-3">Pelanggan</th>
+                                    <th class="p-3">Sales</th>
                                     <th class="p-3">Total</th>
                                     <th class="p-3">Dibayar</th>
                                     <th class="p-3">Sisa</th>
@@ -554,26 +789,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         filteredBookings.forEach(b => {
             const pelanggan = db.pelanggan.find(p => p.id === b.pelangganId);
+            const sales = db.users.find(u => u.id === b.createdBy);
             const paymentInfo = getPaymentInfo(b.id);
-            const paymentStatus = getPaymentStatus(b, paymentInfo.totalPaid);
+            const paymentStatus = getPaymentStatus(b, paymentInfo.totalVerifiedPaid);
 
-            let deleteButtonHtml = '';
-            if (canManage) {
-                deleteButtonHtml = `<button onclick="confirmDeleteBooking('${b.id}')" title="Hapus Transaksi" class="bg-red-700 hover:bg-red-800 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Hapus</button>`;
+            let aksiHtml = '';
+            if (b.status === 'Batal') {
+                const cancelledByUser = db.users.find(u => u.id === b.cancelledBy);
+                const reasonText = b.cancellationReason || 'Tidak ada alasan';
+                const cancelledByText = cancelledByUser ? `oleh ${cancelledByUser.name}` : '';
+                aksiHtml = `<span class="text-red-400 text-xs italic flex items-center" title="Dibatalkan ${cancelledByText}. Alasan: ${reasonText}">
+                                <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i> Dibatalkan
+                            </span>`;
+            } else {
+                aksiHtml = `<button onclick="generateInvoice('${b.id}')" title="Cetak Invoice" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="receipt" class="w-4 h-4 mr-1"></i> Invoice</button>
+                            <button onclick="openCancellationModal('${b.id}')" title="Batalkan Booking" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="ban" class="w-4 h-4 mr-1"></i> Batalkan</button>`;
             }
 
             tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                 <td class="p-3 font-mono">${b.id}</td>
                 <td class="p-3">${pelanggan ? pelanggan.nama : 'N/A'}</td>
+                <td class="p-3">${sales ? sales.name : 'N/A'}</td>
                 <td class="p-3">${formatCurrency(b.totalHarga)}</td>
-                <td class="p-3 text-green-500">${formatCurrency(paymentInfo.totalPaid)}</td>
+                <td class="p-3 text-green-500">${formatCurrency(paymentInfo.totalVerifiedPaid)}</td>
                 <td class="p-3 text-red-500">${formatCurrency(paymentInfo.balance)}</td>
                 <td class="p-3">${getPaymentStatusBadge(paymentStatus)}</td>
-                <td class="p-3 flex flex-wrap gap-1">
-                    <button onclick="openPaymentModal('${b.id}')" title="Input Pembayaran" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed" ${paymentInfo.balance <= 0 ? 'disabled' : ''}><i data-lucide="dollar-sign" class="w-4 h-4 mr-1"></i> Bayar</button>
-                    <button onclick="generateInvoice('${b.id}')" title="Cetak Invoice" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center"><i data-lucide="receipt" class="w-4 h-4 mr-1"></i> Invoice</button>
-                    ${deleteButtonHtml}
-                </td>
+                <td class="p-3 flex flex-wrap gap-1">${aksiHtml}</td>
             </tr>`;
         });
         tableHtml += `</tbody></table>`;
@@ -581,27 +822,45 @@ document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
     }
 
-    function renderPembayaranTable(filter = '') {
+    function renderPembayaranTable(filter = '', salesId = 'all') {
         const container = document.getElementById('pembayaran-table-container');
         const allBookings = [...db.kamarBookings, ...db.meetingBookings];
 
         // Filter for bookings with outstanding balance
         let bookingsWithBalance = allBookings.filter(b => {
             const paymentInfo = getPaymentInfo(b.id);
-            return paymentInfo.balance > 0;
+            // Also filter out cancelled bookings from piutang
+            return paymentInfo.balance > 0 && b.status !== 'Batal';
         }).sort((a, b) => new Date(b.tanggalBooking) - new Date(a.tanggalBooking));
+
+        // Calculate and render summary totals from the full piutang list
+        const totalTagihanPiutang = bookingsWithBalance.reduce((sum, b) => sum + b.totalHarga, 0);
+        const totalSisaPiutang = bookingsWithBalance.reduce((sum, b) => sum + getPaymentInfo(b.id).balance, 0);
+        const totalTransaksiPiutang = bookingsWithBalance.length;
+
+        document.getElementById('pembayaran-total-tagihan').textContent = formatCurrency(totalTagihanPiutang);
+        document.getElementById('pembayaran-total-sisa').textContent = formatCurrency(totalSisaPiutang);
+        document.getElementById('pembayaran-total-transaksi').textContent = totalTransaksiPiutang;
         
         // Apply search filter
         if (filter) {
             bookingsWithBalance = bookingsWithBalance.filter(b => {
                 const customer = db.pelanggan.find(p => p.id === b.pelangganId);
+                const sales = db.users.find(u => u.id === b.createdBy);
                 return b.id.toLowerCase().includes(filter.toLowerCase()) ||
-                       (customer && customer.nama.toLowerCase().includes(filter.toLowerCase()));
+                       (customer && customer.nama.toLowerCase().includes(filter.toLowerCase())) ||
+                       (sales && sales.name.toLowerCase().includes(filter.toLowerCase()));
             });
         }
 
+        // Apply sales filter
+        if (salesId !== 'all') {
+            const numericSalesId = parseInt(salesId);
+            bookingsWithBalance = bookingsWithBalance.filter(b => b.createdBy === numericSalesId);
+        }
+
         if (bookingsWithBalance.length === 0) {
-            container.innerHTML = getEmptyState(filter ? 'Tidak ada piutang yang cocok.' : 'Tidak ada piutang saat ini.');
+            container.innerHTML = getEmptyState(filter || salesId !== 'all' ? 'Tidak ada piutang yang cocok dengan filter.' : 'Tidak ada piutang saat ini.');
             lucide.createIcons();
             return;
         }
@@ -611,6 +870,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <tr class="border-b border-[var(--border-color)]">
                                     <th class="p-3">ID Booking</th>
                                     <th class="p-3">Pelanggan</th>
+                                    <th class="p-3">Sales</th>
+                                    <th class="p-3">Tanggal Event</th>
                                     <th class="p-3">Total Tagihan</th>
                                     <th class="p-3">Sisa Tagihan</th>
                                     <th class="p-3">Status Bayar</th>
@@ -621,19 +882,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
         bookingsWithBalance.forEach(b => {
             const pelanggan = db.pelanggan.find(p => p.id === b.pelangganId);
+            const sales = db.users.find(u => u.id === b.createdBy);
             const paymentInfo = getPaymentInfo(b.id);
-            const paymentStatus = getPaymentStatus(b, paymentInfo.totalPaid);
+            const paymentStatus = getPaymentStatus(b, paymentInfo.totalVerifiedPaid);
 
-            tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
+            const eventDate = b.tipeBooking === 'Kamar' ? b.checkin : b.tanggalMulai;
+            const formattedEventDate = new Date(eventDate + 'T00:00:00').toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            });
+
+            const hasUnverifiedPayments = paymentInfo.payments.some(p => !p.verified);
+            const canVerify = db.settings.rolePermissions[currentUser.role]?.can_verify_payment;
+            let verificationButton = '';
+            if (hasUnverifiedPayments && canVerify) {
+                verificationButton = `<button onclick="openVerificationModal('${b.id}')" title="Verifikasi Pembayaran" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center">
+                    <i data-lucide="shield-check" class="w-4 h-4 mr-1"></i> Verifikasi
+                </button>`;
+            }
+
+            // Check for payments with proof
+            const paymentsWithProof = paymentInfo.payments.filter(p => p.proofUrl);
+            let viewProofButton = '';
+            if (paymentsWithProof.length > 0) {
+                // Just show a button for the latest proof for simplicity
+                const latestPaymentWithProof = paymentsWithProof.sort((a, b) => b.id - a.id)[0];
+                viewProofButton = `<button onclick="openProofModal(${latestPaymentWithProof.id})" title="Lihat Bukti Bayar" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center">
+                    <i data-lucide="image" class="w-4 h-4 mr-1"></i> Bukti
+                </button>`;
+            }
+
+            tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]" data-booking-id="${b.id}">
                 <td class="p-3 font-mono">${b.id}</td>
                 <td class="p-3">${pelanggan ? pelanggan.nama : 'N/A'}</td>
+                <td class="p-3">${sales ? sales.name : 'N/A'}</td>
+                <td class="p-3">${formattedEventDate}</td>
                 <td class="p-3">${formatCurrency(b.totalHarga)}</td>
                 <td class="p-3 font-bold text-red-500">${formatCurrency(paymentInfo.balance)}</td>
                 <td class="p-3">${getPaymentStatusBadge(paymentStatus)}</td>
-                <td class="p-3">
+                <td class="p-3 flex space-x-1">
                     <button onclick="openPaymentModal('${b.id}')" title="Input Pembayaran" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 text-xs rounded-md flex items-center">
                         <i data-lucide="dollar-sign" class="w-4 h-4 mr-1"></i> Bayar
                     </button>
+                    ${verificationButton}
+                    ${viewProofButton}
                 </td>
             </tr>`;
         });
@@ -661,6 +952,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     lokasiHtml = `<p class="text-xs text-[var(--text-secondary)] mt-1 flex items-center"><i data-lucide="map-pin" class="w-3 h-3 mr-1"></i>${item.lokasi}</p>`;
                 }
             }
+
+            let fotoHtml = '';
+            if (item.fotoUrl) {
+                fotoHtml = `<button onclick="openAgendaPhotoModal(${item.id})" class="mt-2 text-xs text-blue-400 hover:underline flex items-center"><i data-lucide="camera" class="w-3 h-3 mr-1"></i>Lihat Foto</button>`;
+            }
             
             let actionButtons = `<div class="flex items-center space-x-1 flex-shrink-0 ml-4">`;
             if (item.status === 'Tentative') {
@@ -675,14 +971,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             actionButtons += `</div>`;
 
-            const cardHtml = `<div class="bg-[var(--bg-tertiary)]/50 p-4 rounded-lg flex items-start justify-between">
+            const cardHtml = `<div class="bg-[var(--bg-tertiary)]/50 p-4 rounded-lg flex items-start justify-between" data-agenda-id="${item.id}">
                 <div>
-                    ${getAgendaBadges(item)}
+                    <div class="flex items-center gap-2">${getAgendaTipeBadge(item.tipe)}${getAgendaStatusBadge(item.status)}</div>
                     <p class="font-semibold text-[var(--text-primary)] mt-2">${item.judul}</p>
                     <p class="text-sm text-[var(--text-secondary)]">Dengan: ${pelanggan ? pelanggan.nama : 'N/A'}</p>
                     <p class="text-sm text-[var(--text-secondary)]">${new Date(item.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} | ${item.jamMulai} - ${item.jamSelesai}</p>
                     <div class="mt-2">${lokasiHtml}</div>
                     <p class="text-xs text-gray-500 mt-1">${item.catatan || ''}</p>
+                    ${fotoHtml}
                 </div>
                 ${actionButtons}
             </div>`;
@@ -698,10 +995,53 @@ document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
     }
 
+    function renderDashboardAgendaList() {
+        const container = document.getElementById('dashboard-agenda-list');
+        if (!container) return;
+
+        const todayString = now.toISOString().split('T')[0];
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const tomorrowString = tomorrow.toISOString().split('T')[0];
+
+        const priorityAgendas = db.agenda
+            .filter(a => (a.tanggal === todayString || a.tanggal === tomorrowString) && a.status !== 'selesai')
+            .sort((a, b) => {
+                const dateA = new Date(`${a.tanggal}T${a.jamMulai}`);
+                const dateB = new Date(`${b.tanggal}T${b.jamMulai}`);
+                return dateA - dateB;
+            });
+
+        if (priorityAgendas.length === 0) {
+            container.innerHTML = getEmptyState('Tidak ada agenda prioritas untuk hari ini atau besok.');
+            lucide.createIcons();
+            return;
+        }
+
+        let html = '';
+        priorityAgendas.forEach(item => {
+            const pelanggan = db.pelanggan.find(p => p.id === item.pelangganId);
+            const isToday = item.tanggal === todayString;
+
+            html += `
+                <div class="p-3 rounded-md bg-[var(--bg-tertiary)]/60 border-l-4 ${isToday ? 'border-[var(--accent-blue)]' : 'border-[var(--accent-yellow)]'}">
+                    <p class="font-semibold text-sm truncate">${item.judul}</p>
+                    <div class="flex justify-between items-center text-xs text-[var(--text-secondary)] mt-1">
+                        <span><i data-lucide="user" class="w-3 h-3 inline-block mr-1"></i>${pelanggan ? pelanggan.nama : 'N/A'}</span>
+                        <span><i data-lucide="clock" class="w-3 h-3 inline-block mr-1"></i>${item.jamMulai}</span>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+        lucide.createIcons();
+    }
+
     function populateAllDropdowns() {
         const pelangganDropdowns = document.querySelectorAll('#bk-pelanggan, #bm-pelanggan, #agenda-pelanggan');
         pelangganDropdowns.forEach(d => { d.innerHTML = '<option value="">-- Pilih --</option>'; db.pelanggan.forEach(p => { d.innerHTML += `<option value="${p.id}">${p.nama} ${p.perusahaan !== '-' ? `(${p.perusahaan})` : ''}</option>`; }); });
         
+        populateAgendaTypeDropdown();
+
         const kamarDropdown = document.querySelector('#room-rows-container .room-row:first-child select[name="bk-tipe-kamar"]');
         if (kamarDropdown) {
             populateRoomTypeDropdown(kamarDropdown);
@@ -715,16 +1055,63 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const key in db.meetingRooms) { meetingRoomDropdown.innerHTML += `<option value="${key}">${db.meetingRooms[key].name}</option>`; }
     }
 
+    function populatePembayaranSalesFilter() {
+        const salesFilterDropdown = document.getElementById('pembayaran-sales-filter');
+        if (!salesFilterDropdown) return;
+
+        salesFilterDropdown.innerHTML = '<option value="all">Semua Sales</option>';
+        const salesUsers = db.users.filter(u => u.role === 'Sales');
+
+        salesUsers.forEach(user => {
+            salesFilterDropdown.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+        });
+    }
+
+    function populateAgendaTypeDropdown() {
+        const agendaTipeDropdown = document.getElementById('agenda-tipe');
+        if (!agendaTipeDropdown) return;
+        agendaTipeDropdown.innerHTML = '<option value="">-- Pilih Tipe --</option>';
+        if (db.agendaTypes) {
+            db.agendaTypes.forEach(type => {
+                agendaTipeDropdown.innerHTML += `<option value="${type.name}">${type.name}</option>`;
+            });
+        }
+    }
+
     function populateRoomTypeDropdown(selectElement) {
         selectElement.innerHTML = '<option value="">-- Pilih --</option>';
         for (const key in db.roomTypes) { selectElement.innerHTML += `<option value="${key}">${db.roomTypes[key].name}</option>`; }
     }
     
+    function populateSalesFilterDropdown() {
+        const salesFilterDropdown = document.getElementById('report-sales-filter');
+        if (!salesFilterDropdown) return;
+
+        salesFilterDropdown.innerHTML = '<option value="all">Semua Sales</option>';
+        const salesUsers = db.users.filter(u => u.role === 'Sales');
+
+        salesUsers.forEach(user => {
+            salesFilterDropdown.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+        });
+    }
+
     function renderSettingsForms() {
         document.getElementById('tax-service-percentage').value = db.settings.taxAndServicePercentage;
-        document.getElementById('invoice-logo-url').value = db.settings.invoiceSettings.logoUrl;
         document.getElementById('invoice-payment-notes').value = db.settings.invoiceSettings.paymentNotes;
+        renderCompanyProfileSettings();
         renderRoleSettings();
+        renderAgendaTypeTable();
+    }
+
+    function renderCompanyProfileSettings() {
+        const profile = db.settings.companyProfile;
+        if (profile) {
+            document.getElementById('profil-nama').value = profile.name || '';
+            document.getElementById('profil-telepon').value = profile.phone || '';
+            document.getElementById('profil-alamat').value = profile.address || '';
+            const logoPreview = document.getElementById('profil-logo-preview');
+            logoPreview.src = profile.logoUrl || 'https://placehold.co/200x60/cccccc/ffffff?text=Logo';
+        }
     }
 
     function renderRoleSettings() {
@@ -733,31 +1120,178 @@ document.addEventListener('DOMContentLoaded', function() {
         const pageNames = {
             'dashboard': 'Dashboard', 'kalender': 'Kalender', 'pelanggan': 'Pelanggan', 'agenda': 'Agenda Meeting',
             'booking-kamar': 'Booking Kamar', 'booking-meeting': 'Booking Ruang Meeting', 'pembayaran': 'Pembayaran', 'laporan': 'Laporan & Invoice',
-            'laporan-sales': 'Laporan Sales', 'manajemen-user': 'Manajemen User', 'manajemen-inventaris': 'Manajemen Inventaris',
-            'manajemen-pengaturan': 'Pengaturan'
+            'laporan-sales': 'Laporan Sales', 'manajemen-user': 'Manajemen User', 'manajemen-target': 'Manajemen Target', 'manajemen-inventaris': 'Manajemen Inventaris',
+            'manajemen-pengaturan': 'Pengaturan',
+            // Action Permissions
+            'can_verify_payment': 'Verifikasi Pembayaran'
         };
 
         let html = '';
         for (const role in permissions) {
             html += `<div class="p-4 border border-[var(--border-color)] rounded-lg">
-                        <h4 class="text-lg font-semibold mb-3">${role}</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">`;
+                        <h4 class="text-lg font-semibold mb-4">${role}</h4>`;
             
+            // Page Access Section
+            html += `<p class="text-sm font-semibold text-[var(--text-secondary)] mb-2">Akses Halaman</p>
+                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 border-b border-[var(--border-color)] pb-4">`;
             for (const page in permissions[role]) {
+                if (page.startsWith('can_')) continue; // Skip action permissions
                 const isChecked = permissions[role][page];
-                // Admin role cannot be edited
                 const isDisabled = role === 'Admin' ? 'disabled' : '';
-                html += `
-                    <label class="flex items-center space-x-3">
-                        <input type="checkbox" data-role="${role}" data-page="${page}" ${isChecked ? 'checked' : ''} ${isDisabled}
-                            class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
-                        <span class="text-sm text-[var(--text-primary)]">${pageNames[page] || page}</span>
-                    </label>
-                `;
+                html += `<label class="flex items-center space-x-3">
+                            <input type="checkbox" data-role="${role}" data-page="${page}" ${isChecked ? 'checked' : ''} ${isDisabled}
+                                class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
+                            <span class="text-sm text-[var(--text-primary)]">${pageNames[page] || page}</span>
+                         </label>`;
             }
-            html += `</div></div>`;
+            html += `</div>`;
+
+            // Action Permissions Section
+            html += `<p class="text-sm font-semibold text-[var(--text-secondary)] mb-2">Hak Aksi Spesifik</p>
+                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">`;
+            for (const page in permissions[role]) {
+                if (!page.startsWith('can_')) continue; // Only show action permissions
+                const isChecked = permissions[role][page];
+                const isDisabled = role === 'Admin' ? 'disabled' : '';
+                html += `<label class="flex items-center space-x-3">
+                            <input type="checkbox" data-role="${role}" data-page="${page}" ${isChecked ? 'checked' : ''} ${isDisabled}
+                                class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
+                            <span class="text-sm text-[var(--text-primary)]">${pageNames[page] || page}</span>
+                         </label>`;
+            }
+            html += `</div></div>`; // Close grid and role container
         }
         container.innerHTML = html;
+    }
+
+    function renderAgendaTypeTable() {
+        const container = document.getElementById('pengaturan-agenda-table-container');
+        const canManage = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
+
+        if (!db.agendaTypes || db.agendaTypes.length === 0) {
+            container.innerHTML = getEmptyState('Belum ada tipe agenda yang ditambahkan.');
+            lucide.createIcons();
+            return;
+        }
+
+        let tableHtml = `<table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-[var(--border-color)]">
+                                    <th class="p-3">Nama Tipe Agenda</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+        db.agendaTypes.forEach(type => {
+            tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
+                <td class="p-3">${type.name}</td>
+                <td class="p-3 flex justify-center space-x-2">
+                    <button onclick="openAgendaTypeModal(${type.id})" title="Edit Tipe" class="p-2 text-yellow-400 hover:text-yellow-300 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                    ${canManage ? `<button onclick="confirmDelete('agendaType', ${type.id})" title="Hapus Tipe" class="p-2 text-red-500 hover:text-red-400 rounded-full hover:bg-[var(--bg-hover)] transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                </td>
+            </tr>`;
+        });
+        tableHtml += `</tbody></table>`;
+        container.innerHTML = tableHtml;
+        lucide.createIcons();
+    }
+
+    function checkAndCreateAgendaReminders() {
+        const todayString = now.toISOString().split('T')[0];
+        const todaysAgendas = db.agenda.filter(a => a.tanggal === todayString && a.status !== 'selesai');
+
+        todaysAgendas.forEach(agenda => {
+            // Periksa apakah pengingat untuk agenda ini sudah ada
+            const reminderExists = db.notifications.some(n =>
+                n.type === 'agenda_reminder' && n.targetId === agenda.id
+            );
+
+            if (!reminderExists) {
+                createNotification(
+                    `Agenda hari ini: ${agenda.judul} pada jam ${agenda.jamMulai}.`,
+                    'agenda_reminder',
+                    agenda.id
+                );
+            }
+        });
+    }
+
+    function checkAndCreatePaymentReminders() {
+        const allBookings = [...db.kamarBookings, ...db.meetingBookings];
+        const reminderThresholdDays = 3; // Ingatkan 3 hari sebelum jatuh tempo
+
+        allBookings.forEach(booking => {
+            const paymentInfo = getPaymentInfo(booking.id);
+            // Hanya buat pengingat untuk booking yang memiliki sisa tagihan dan tidak dibatalkan
+            if (paymentInfo.balance <= 0 || booking.status === 'Batal') {
+                return;
+            }
+
+            const dueDate = new Date((booking.tipeBooking === 'Kamar' ? booking.checkin : booking.tanggalMulai) + 'T00:00:00');
+            const timeDiff = dueDate.getTime() - now.getTime();
+            const daysUntilDue = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            if (daysUntilDue > 0 && daysUntilDue <= reminderThresholdDays) {
+                // Periksa apakah pengingat untuk booking ini sudah ada
+                const reminderExists = db.notifications.some(n =>
+                    n.type === 'payment_reminder' && n.targetId === booking.id
+                );
+
+                if (!reminderExists) {
+                    const formattedDueDate = dueDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+                    const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
+                    const customerName = customer ? customer.nama : `Booking ID ${booking.id}`;
+                    
+                    createNotification(
+                        `Pembayaran untuk ${customerName} jatuh tempo pada ${formattedDueDate}.`,
+                        'payment_reminder',
+                        booking.id
+                    );
+                }
+            }
+        });
+    }
+
+    function createNotification(message, type, targetId) {
+        const newNotification = {
+            id: Date.now(),
+            message: message,
+            type: type, // 'verification', 'payment_reminder', atau 'agenda_reminder'
+            targetId: targetId,
+            timestamp: new Date().toISOString(),
+            readBy: []
+        };
+        db.notifications.push(newNotification);
+    }
+
+    function renderNotifications() {
+        const container = document.getElementById('notification-container');
+        const list = document.getElementById('notification-list');
+        const badge = document.getElementById('notification-badge');
+
+        if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Manager')) {
+            container.classList.add('hidden');
+            return;
+        }
+        container.classList.remove('hidden');
+
+        const unreadNotifications = db.notifications.filter(n => !n.readBy.includes(currentUser.id));
+
+        badge.classList.toggle('hidden', unreadNotifications.length === 0);
+
+        list.innerHTML = '';
+        if (unreadNotifications.length === 0) {
+            list.innerHTML = `<p class="p-4 text-sm text-center text-[var(--text-secondary)]">Tidak ada notifikasi baru.</p>`;
+        } else {
+            [...unreadNotifications].reverse().forEach(n => {
+                list.innerHTML += `
+                    <a href="#" class="notification-item block p-3 hover:bg-[var(--bg-hover)] border-b border-[var(--border-color)] cursor-pointer" data-id="${n.id}" data-target-id="${n.targetId}" data-type="${n.type}">
+                        <p class="text-sm">${n.message}</p>
+                        <p class="text-xs text-[var(--text-secondary)] mt-1">${timeAgo(n.timestamp)}</p>
+                    </a>`;
+            });
+        }
     }
 
     function updateDashboardCards() {
@@ -772,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         const totalPendapatan = bookingsBulanIni.reduce((sum, b) => sum + b.totalHarga, 0);
-        document.getElementById('dashboard-pendapatan').textContent = formatCurrency(totalPendapatan);
+        document.getElementById('dashboard-pendapatan').textContent = formatCompactCurrency(totalPendapatan);
         document.getElementById('dashboard-booking').textContent = bookingsBulanIni.length;
         document.getElementById('dashboard-pelanggan').textContent = db.pelanggan.length;
         
@@ -786,176 +1320,130 @@ document.addEventListener('DOMContentLoaded', function() {
             const paymentInfo = getPaymentInfo(booking.id);
             return sum + paymentInfo.balance;
         }, 0);
-        document.getElementById('dashboard-piutang').textContent = formatCurrency(totalPiutang);
+        document.getElementById('dashboard-piutang').textContent = formatCompactCurrency(totalPiutang);
     }
 
     // --- CHART LOGIC ---
     function renderAllCharts() {
         renderSalesTargetChart();
-        renderSalespersonChart();
-        renderSegmentChart();
+        renderSegmentTargetChart();
+        renderBookingTypeChart();
     }
 
     function renderSalesTargetChart() {
-        const ctx = document.getElementById('salesTargetChart').getContext('2d');
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        const targetKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const ctx = document.getElementById('salesTargetChart')?.getContext('2d');
+        if (!ctx) return;
 
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+        // Custom plugin to draw text in the center of the gauge, behind the datasets.
+        const gaugeText = {
+            id: 'gaugeText',
+            beforeDatasetsDraw(chart, args, options) {
+                const { ctx, chartArea: { top, bottom, left, right, width, height } } = chart;
+                ctx.save();
+                const value = chart.data.datasets[0].data[0];
+                const target = chart.data.datasets[0].data[0] + chart.data.datasets[0].data[1];
+                const percentage = target > 0 ? ((value / target) * 100).toFixed(1) : 0;
 
-        const bookingsBulanIni = [...db.kamarBookings, ...db.meetingBookings].filter(b => {
-            const bookingDate = new Date(b.tanggalBooking);
-            return bookingDate >= firstDayOfMonth && bookingDate <= lastDayOfMonth;
-        });
-        const totalPendapatan = bookingsBulanIni.reduce((sum, b) => sum + b.totalHarga, 0);
-        const targetAmount = (db.targets[targetKey] || 0) * 1000000;
-        const sisaTarget = Math.max(0, targetAmount - totalPendapatan);
+                // Percentage Text
+                ctx.font = `bold ${width / 8}px sans-serif`;
+                ctx.fillStyle = options.textColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const x = width / 2 + left;
+                const y = height + top - (height / 4);
+                ctx.fillText(`${percentage}%`, x, y);
 
-        const style = getComputedStyle(document.documentElement);
-        const accentColor = style.getPropertyValue('--accent');
-        const tertiaryBgColor = style.getPropertyValue('--bg-tertiary');
-        const textColor = style.getPropertyValue('--text-primary');
-        
-        const targetDisplay = document.getElementById('sales-target-display');
-        if (targetAmount > 0) {
-            targetDisplay.textContent = `(Target: ${formatCurrency(targetAmount)})`;
-        } else {
-            targetDisplay.textContent = `(Target Belum Diatur)`;
-        }
-
-        const chartData = {
-            labels: ['Pencapaian', 'Sisa Target'],
-            datasets: [{
-                data: [totalPendapatan, sisaTarget],
-                backgroundColor: [accentColor, tertiaryBgColor],
-                borderColor: style.getPropertyValue('--bg-secondary'),
-                borderWidth: 4,
-                hoverOffset: 8
-            }]
+                // "Pencapaian" Text
+                ctx.font = `normal ${width / 15}px sans-serif`;
+                ctx.fillStyle = options.secondaryColor;
+                ctx.fillText('Pencapaian', x, y - (width / 9));
+                ctx.restore();
+            }
         };
 
         if (salesTargetChartInstance) {
             salesTargetChartInstance.destroy();
         }
 
-        salesTargetChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: chartData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: textColor,
-                            padding: 20,
-                            font: {
-                                size: 14
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.label}: ${formatCurrency(context.raw)}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    function renderSalespersonChart() {
-        const ctx = document.getElementById('salespersonChart').getContext('2d');
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-        const bookingsBulanIni = [...db.kamarBookings, ...db.meetingBookings].filter(b => {
-            const bookingDate = new Date(b.tanggalBooking);
-            return bookingDate >= firstDayOfMonth && bookingDate <= lastDayOfMonth;
-        });
-
-        const salesData = {};
-        bookingsBulanIni.forEach(booking => {
-            const user = db.users.find(u => u.id === booking.createdBy);
-            if (user) {
-                if (!salesData[user.name]) {
-                    salesData[user.name] = 0;
-                }
-                salesData[user.name] += booking.totalHarga;
-            }
-        });
+        const targetKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const bookingsBulanIni = [...db.kamarBookings, ...db.meetingBookings].filter(b => new Date(b.tanggalBooking).getMonth() === currentMonth && new Date(b.tanggalBooking).getFullYear() === currentYear);
+        const totalPendapatan = bookingsBulanIni.reduce((sum, b) => sum + b.totalHarga, 0);        
+        const targetAmount = db.targets[targetKey]?.overall || 0;
+        const sisaTarget = Math.max(0, targetAmount - totalPendapatan);
 
         const style = getComputedStyle(document.documentElement);
+        const accentColor = style.getPropertyValue('--accent');
         const textColor = style.getPropertyValue('--text-primary');
-        const chartColors = ['#3b82f6', '#22c55e', '#f97316', '#8b5cf6', '#ec4899'];
+        const secondaryTextColor = style.getPropertyValue('--text-secondary');
+        // Make the 'Sisa Target' track color slightly visible for better animation feel
+        const sisaTargetColor = style.getPropertyValue('--border-color');
+        
+        document.getElementById('sales-target-display').textContent = targetAmount > 0 ? `(Target: ${formatCurrency(targetAmount)})` : `(Target Belum Diatur)`;
 
-        const chartData = {
-            labels: Object.keys(salesData),
-            datasets: [{
-                data: Object.values(salesData),
-                backgroundColor: chartColors,
-                borderColor: style.getPropertyValue('--bg-secondary'),
-                borderWidth: 4,
-                hoverOffset: 8
-            }]
-        };
-
-        if (salespersonChartInstance) {
-            salespersonChartInstance.destroy();
-        }
-
-        salespersonChartInstance = new Chart(ctx, {
-            type: 'pie',
-            data: chartData,
+        salesTargetChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pencapaian', 'Sisa Target'],
+                datasets: [{
+                    // Add a tiny value if sisaTarget is 0 to ensure the gauge shape is maintained
+                    data: [totalPendapatan, sisaTarget > 0 ? sisaTarget : 0.00001],
+                    backgroundColor: [accentColor, sisaTargetColor],
+                    borderColor: style.getPropertyValue('--bg-secondary'),
+                    borderWidth: 2
+                }]
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                rotation: -90,
+                circumference: 180,
+                cutout: '75%',
+                animation: {
+                    duration: 1200,
+                    easing: 'easeInOutCubic'
+                },
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: textColor,
-                            padding: 20,
-                            font: { size: 14 }
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: {
+                        enabled: true, // Re-enable tooltip for interactivity
                         callbacks: {
                             label: function(context) {
+                                // Hide tooltip for the tiny fake segment if target is met/exceeded
+                                if (context.label === 'Sisa Target' && context.raw < 1) return null;
                                 return `${context.label}: ${formatCurrency(context.raw)}`;
                             }
                         }
-                    }
+                    },
+                    gaugeText: { textColor: textColor, secondaryColor: secondaryTextColor }
                 }
-            }
+            },
+            plugins: [gaugeText]
         });
     }
 
-    function renderSegmentChart() {
-        const ctx = document.getElementById('segmentChart').getContext('2d');
+    function renderSegmentTargetChart() {
+        const ctx = document.getElementById('segmentTargetChart')?.getContext('2d');
+        if (!ctx) return;
+
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+        const targetKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        
+        const segmentTargets = db.targets[targetKey]?.segments || {};
+        const segments = ['Corporate', 'Individual', 'Travel Agent', 'Government'];
 
+        // Calculate actual achievements per segment
+        const segmentAchievements = { 'Corporate': 0, 'Individual': 0, 'Travel Agent': 0, 'Government': 0 };
         const bookingsBulanIni = [...db.kamarBookings, ...db.meetingBookings].filter(b => {
             const bookingDate = new Date(b.tanggalBooking);
-            return bookingDate >= firstDayOfMonth && bookingDate <= lastDayOfMonth;
+            return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
         });
-
-        const segmentData = { 'Individual': 0, 'Corporate': 0, 'Travel Agent': 0, 'Government': 0 };
         bookingsBulanIni.forEach(booking => {
             const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
-            if (customer && segmentData.hasOwnProperty(customer.segmentasi)) {
-                segmentData[customer.segmentasi] += booking.totalHarga;
+            if (customer && segmentAchievements.hasOwnProperty(customer.segmentasi)) {
+                segmentAchievements[customer.segmentasi] += booking.totalHarga;
             }
         });
 
@@ -963,50 +1451,146 @@ document.addEventListener('DOMContentLoaded', function() {
         const accentColor = style.getPropertyValue('--accent');
         const textColor = style.getPropertyValue('--text-primary');
         const gridColor = style.getPropertyValue('--border-color');
+        const targetColor = style.getPropertyValue('--bg-tertiary');
 
-        const chartData = {
-            labels: Object.keys(segmentData),
-            datasets: [{
-                label: 'Pendapatan',
-                data: Object.values(segmentData),
-                backgroundColor: accentColor,
-                borderRadius: 4,
-            }]
-        };
-
-        if (segmentChartInstance) {
-            segmentChartInstance.destroy();
+        if (segmentTargetChartInstance) {
+            segmentTargetChartInstance.destroy();
         }
 
-        segmentChartInstance = new Chart(ctx, {
+        segmentTargetChartInstance = new Chart(ctx, {
             type: 'bar',
-            data: chartData,
+            data: {
+                labels: segments,
+                datasets: [
+                    { label: 'Pencapaian', data: segments.map(s => segmentAchievements[s]), backgroundColor: accentColor, borderRadius: 4 },
+                    { label: 'Target', data: segments.map(s => segmentTargets[s] || 0), backgroundColor: targetColor, borderRadius: 4 }
+                ]
+            },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: textColor },
-                        grid: { color: gridColor }
-                    },
-                    x: {
-                        ticks: { color: textColor },
-                        grid: { display: false }
-                    }
+                    y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
+                    x: { ticks: { color: textColor }, grid: { display: false } }
                 },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `Pendapatan: ${formatCurrency(context.raw)}`;
-                                }
-                            }
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: textColor } },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw)}`
                         }
                     }
                 }
-            });
+            }
+        });
+    }
+
+    function renderBookingTypeChart() {
+        const ctx = document.getElementById('bookingTypeChart')?.getContext('2d');
+        if (!ctx) return;
+
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        const roomBookingsRevenue = db.kamarBookings.filter(b => {
+            const bookingDate = new Date(b.tanggalBooking);
+            return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+        }).reduce((sum, b) => sum + b.totalHarga, 0);
+
+        const meetingBookingsRevenue = db.meetingBookings.filter(b => {
+            const bookingDate = new Date(b.tanggalBooking);
+            return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+        }).reduce((sum, b) => sum + b.totalHarga, 0);
+
+        const style = getComputedStyle(document.documentElement);
+        const textColor = style.getPropertyValue('--text-primary');
+        const color1 = style.getPropertyValue('--accent-blue');
+        const color2 = style.getPropertyValue('--accent-green');
+        const borderColor = style.getPropertyValue('--bg-secondary');
+
+        if (bookingTypeChartInstance) {
+            bookingTypeChartInstance.destroy();
+        }
+
+        bookingTypeChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Booking Kamar', 'Booking Meeting'],
+                datasets: [{
+                    data: [roomBookingsRevenue, meetingBookingsRevenue],
+                    backgroundColor: [color1, color2],
+                    borderColor: borderColor,
+                    borderWidth: 4,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor, padding: 20, font: { size: 14 } }
+                    },
+                    tooltip: {
+                        callbacks: { label: (context) => `${context.label}: ${formatCurrency(context.raw)}` }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderIndividualSalesTargets() {
+        const container = document.getElementById('individual-sales-targets');
+        if (!container) return;
+
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const targetKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        
+        const monthlyTargets = db.targets[targetKey]?.sales || {};
+        const salesUsers = db.users.filter(u => u.role === 'Sales');
+
+        if (salesUsers.length === 0) {
+            container.innerHTML = getEmptyState('Tidak ada user dengan role "Sales".');
+            lucide.createIcons();
+            return;
+        }
+
+        // Pre-calculate sales per person for the current month
+        const salesAchievements = {};
+        const bookingsBulanIni = [...db.kamarBookings, ...db.meetingBookings].filter(b => {
+            const bookingDate = new Date(b.tanggalBooking);
+            return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+        });
+        bookingsBulanIni.forEach(booking => {
+            if (!salesAchievements[booking.createdBy]) {
+                salesAchievements[booking.createdBy] = 0;
+            }
+            salesAchievements[booking.createdBy] += booking.totalHarga;
+        });
+
+        let html = `<h3 class="text-lg font-semibold mb-4">Pencapaian Target Sales Individual (Bulan Ini)</h3><div class="space-y-4">`;
+
+        salesUsers.forEach(user => {
+            const target = monthlyTargets[user.id] || 0;
+            const achievement = salesAchievements[user.id] || 0;
+            const percentage = target > 0 ? (achievement / target) * 100 : 0;
+
+            html += `
+                <div>
+                    <div class="flex justify-between items-center mb-1 text-sm">
+                        <span class="font-semibold">${user.name}</span>
+                        <span class="text-[var(--text-secondary)]">${formatCurrency(achievement)} / <span class="font-medium text-[var(--text-primary)]">${formatCurrency(target)}</span></span>
+                    </div>
+                    <div class="w-full bg-[var(--bg-tertiary)] rounded-full h-2.5">
+                        <div class="bg-[var(--accent)] h-2.5 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
     }
 
     // --- CALENDAR LOGIC ---
@@ -1015,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!calendarEl) return;
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
+            initialView: 'timeGridWeek',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -1119,21 +1703,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- CALCULATION & PAYMENT LOGIC ---
     function getPaymentInfo(bookingId) {
         const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
-        if (!booking) return { totalPaid: 0, balance: 0, payments: [] };
+        if (!booking) return { totalPaid: 0, totalVerifiedPaid: 0, balance: 0, payments: [] };
 
         const paymentsForBooking = db.payments.filter(p => p.bookingId === bookingId);
         const totalPaid = paymentsForBooking.reduce((sum, p) => sum + p.jumlah, 0);
-        const balance = booking.totalHarga - totalPaid;
+        const totalVerifiedPaid = paymentsForBooking
+            .filter(p => p.verified)
+            .reduce((sum, p) => sum + p.jumlah, 0);
+        
+        // Balance is now calculated against verified payments
+        const balance = booking.totalHarga - totalVerifiedPaid;
 
-        return { totalPaid, balance: balance > 0.01 ? balance : 0, payments: paymentsForBooking };
+        return { totalPaid, totalVerifiedPaid, balance: balance > 0.01 ? balance : 0, payments: paymentsForBooking };
     }
 
-    function getPaymentStatus(booking, totalPaid) {
+    function getPaymentStatus(booking, totalVerifiedPaid) {
         if (booking.status === 'Batal') return 'Batal';
         
-        const balance = booking.totalHarga - totalPaid;
-        if (balance <= 0.01) return 'Lunas';
-        if (totalPaid > 0) return 'Menunggu Pelunasan';
+        // The balance is now correctly calculated against verified payments
+        const balance = booking.totalHarga - totalVerifiedPaid;
+        if (balance <= 0.01) return 'Lunas'; // Based on verified payments
+        if (totalVerifiedPaid > 0) return 'Menunggu Pelunasan';
         return 'Menunggu DP';
     }
 
@@ -1250,6 +1840,12 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
+                // Cleanup map on close
+                if (modalId === 'agendaModal' && agendaMap) {
+                    agendaMap.remove();
+                    agendaMap = null;
+                    agendaMarker = null;
+                }
             }, 300);
         }
     };
@@ -1315,9 +1911,39 @@ document.addEventListener('DOMContentLoaded', function() {
         openModal('paketMeetingModal');
     }
 
+    window.openAgendaTypeModal = (id = null) => {
+        const form = document.getElementById('formAgendaType');
+        form.reset();
+        const title = document.getElementById('agendaTypeModalTitle');
+        const idInput = document.getElementById('agenda-type-id');
+        
+        if (id) {
+            const type = db.agendaTypes.find(t => t.id === id);
+            if (type) {
+                title.textContent = 'Edit Tipe Agenda';
+                idInput.value = type.id;
+                document.getElementById('agenda-type-nama').value = type.name;
+            }
+        } else {
+            title.textContent = 'Tambah Tipe Agenda';
+            idInput.value = '';
+        }
+        openModal('agendaTypeModal');
+    };
+
     window.openAgendaModal = (id = null) => {
         const form = document.getElementById('formAgenda'); form.reset();
         const title = document.getElementById('agendaModalTitle'), idInput = document.getElementById('agenda-id');
+        const fotoUpload = document.getElementById('agenda-foto-upload');
+        const fotoPreview = document.getElementById('agenda-foto-preview');
+        fotoUpload.value = '';
+        fotoPreview.src = '#';
+        fotoPreview.classList.add('hidden');
+
+        let initialCoords = [-6.917464, 107.619125]; // Default to Bandung
+        let initialZoom = 13;
+        let hasInitialMarker = false;
+
         if (id) {
             const item = db.agenda.find(a => a.id === id);
             if (item) {
@@ -1330,9 +1956,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('agenda-jam-selesai').value = item.jamSelesai;
                 document.getElementById('agenda-lokasi').value = item.lokasi || '';
                 document.getElementById('agenda-catatan').value = item.catatan;
+
+                if (item.fotoUrl) {
+                    fotoPreview.src = item.fotoUrl;
+                    fotoPreview.classList.remove('hidden');
+                }
+
+                if (item.lokasi && /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(item.lokasi)) {
+                    initialCoords = item.lokasi.split(',').map(Number);
+                    initialZoom = 16;
+                    hasInitialMarker = true;
+                }
             }
-        } else { title.textContent = 'Tambah Agenda Baru'; idInput.value = ''; }
+        } else { 
+            title.textContent = 'Tambah Agenda Baru'; 
+            idInput.value = ''; 
+        }
         openModal('agendaModal');
+
+        initializeAgendaMap(initialCoords, initialZoom);
+        if (hasInitialMarker) {
+            updateMapAndMarker(initialCoords, false);
+        }
     }
 
     window.markAgendaComplete = (id) => { const item = db.agenda.find(a => a.id === id); if (item) { item.status = 'selesai'; saveData(); renderAll(); showToast('Agenda ditandai selesai.'); } }
@@ -1350,7 +1995,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('user-email').value = user.email;
                 document.getElementById('user-role').value = user.role;
                 passwordInput.placeholder = "Kosongkan jika tidak diubah";
-                passwordInput.required = false;
+
+               passwordInput.required = false;
             }
         } else {
             title.textContent = 'Tambah User Baru';
@@ -1372,18 +2018,136 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('payment-booking-id').textContent = bookingId;
         document.getElementById('payment-booking-id-input').value = bookingId;
         document.getElementById('payment-total-tagihan').textContent = formatCurrency(booking.totalHarga);
-        document.getElementById('payment-sudah-dibayar').textContent = formatCurrency(paymentInfo.totalPaid);
+        document.getElementById('payment-sudah-dibayar').textContent = formatCurrency(paymentInfo.totalVerifiedPaid);
+        document.getElementById('payment-menunggu-verifikasi').textContent = formatCurrency(paymentInfo.totalPaid - paymentInfo.totalVerifiedPaid);
         document.getElementById('payment-sisa-tagihan').textContent = formatCurrency(paymentInfo.balance);
         
         const amountInput = document.getElementById('payment-jumlah');
-        amountInput.value = paymentInfo.balance;
-        amountInput.max = paymentInfo.balance;
+        const remainingToPay = booking.totalHarga - paymentInfo.totalPaid;
+        amountInput.value = remainingToPay > 0.01 ? remainingToPay : '';
+        amountInput.max = remainingToPay;
 
         document.getElementById('payment-tanggal').value = new Date().toISOString().split('T')[0];
+
+        // Reset file input and preview
+        const proofUpload = document.getElementById('payment-proof-upload');
+        const proofPreview = document.getElementById('payment-proof-preview');
+        proofUpload.value = ''; // Clear the file input
+        proofPreview.src = '#';
+        proofPreview.classList.add('hidden');
 
         openModal('paymentModal');
     };
 
+    window.openPriceHistoryModal = (key) => {
+        const room = db.roomTypes[key];
+        if (!room) return;
+
+        const titleEl = document.getElementById('priceHistoryModalTitle');
+        const contentEl = document.getElementById('priceHistoryContent');
+
+        titleEl.textContent = `Riwayat Harga: ${room.name}`;
+
+        if (!room.priceHistory || room.priceHistory.length === 0) {
+            contentEl.innerHTML = getEmptyState('Belum ada riwayat perubahan harga untuk tipe kamar ini.');
+            lucide.createIcons();
+            openModal('priceHistoryModal');
+            return;
+        }
+
+        let historyHtml = '';
+        // Loop through history in reverse to show newest first
+        [...room.priceHistory].reverse().forEach(entry => {
+            const user = db.users.find(u => u.id === entry.changedBy);
+            historyHtml += `
+                <div class="p-4 bg-[var(--bg-tertiary)]/50 rounded-lg border border-[var(--border-color)]">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="font-semibold text-sm">${new Date(entry.date).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                        <p class="text-xs text-[var(--text-secondary)]">Diubah oleh: ${user ? user.name : 'N/A'}</p>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">
+                        ${entry.changes.map(change => `<li>${change.replace(/->/g, '&rarr;')}</li>`).join('')}
+                    </ul>
+                </div>`;
+        });
+
+        contentEl.innerHTML = historyHtml;
+        openModal('priceHistoryModal');
+    };
+
+    window.openAgendaPhotoModal = (agendaId) => {
+        const agenda = db.agenda.find(a => a.id === agendaId);
+        if (!agenda || !agenda.fotoUrl) {
+            showToast('Foto agenda tidak ditemukan.', 'error');
+            return;
+        }
+
+        const modalTitle = document.getElementById('geminiModalTitle');
+        const modalContent = document.getElementById('geminiModalContent');
+
+        modalTitle.innerHTML = `<i data-lucide="image" class="w-5 h-5 mr-2 text-[var(--accent)]"></i> Foto Agenda`;
+        modalContent.innerHTML = `
+            <p class="text-sm text-[var(--text-secondary)]">Agenda: <strong class="text-[var(--text-primary)]">${agenda.judul}</strong></p>
+            <div class="mt-4">
+                <img src="${agenda.fotoUrl}" alt="Foto Agenda" class="rounded-lg max-w-full h-auto mx-auto">
+            </div>
+        `;
+        lucide.createIcons();
+        openModal('geminiModal');
+    };
+
+    window.openVerificationModal = (bookingId) => {
+        const paymentInfo = getPaymentInfo(bookingId);
+        const unverifiedPayments = paymentInfo.payments.filter(p => !p.verified);
+
+        if (unverifiedPayments.length === 0) {
+            showToast('Tidak ada pembayaran yang perlu diverifikasi untuk booking ini.', 'info');
+            return;
+        }
+
+        document.getElementById('verification-booking-id').value = bookingId;
+        document.getElementById('formVerifikasi').reset();
+        const listContainer = document.getElementById('verification-payment-list');
+        listContainer.innerHTML = '';
+
+        unverifiedPayments.forEach(p => {
+            const paymentHtml = `
+                <label class="flex items-center space-x-3 p-2 bg-[var(--bg-primary)] rounded-md hover:bg-[var(--bg-hover)] cursor-pointer">
+                    <input type="checkbox" name="payment-to-verify" value="${p.id}" class="h-4 w-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]">
+                    <div class="flex-1 flex justify-between items-center text-sm">
+                        <span>${formatCurrency(p.jumlah)} - ${new Date(p.tanggal + 'T00:00:00').toLocaleDateString('id-ID')} (${p.metode})</span>
+                        ${p.proofUrl ? `<button type="button" onclick="openProofModal(${p.id})" class="text-xs text-blue-400 hover:underline">Lihat Bukti</button>` : ''}
+                    </div>
+                </label>
+            `;
+            listContainer.innerHTML += paymentHtml;
+        });
+
+        openModal('verificationModal');
+    };
+
+    window.openProofModal = (paymentId) => {
+        const payment = db.payments.find(p => p.id === paymentId);
+        if (!payment || !payment.proofUrl) {
+            showToast('Bukti pembayaran tidak ditemukan.', 'error');
+            return;
+        }
+
+        const modalTitle = document.getElementById('geminiModalTitle');
+        const modalContent = document.getElementById('geminiModalContent');
+
+        modalTitle.innerHTML = `<i data-lucide="image" class="w-5 h-5 mr-2 text-[var(--accent)]"></i> Bukti Pembayaran`;
+        modalContent.innerHTML = `
+            <p class="text-sm text-[var(--text-secondary)]">Booking ID: <strong class="text-[var(--text-primary)]">${payment.bookingId}</strong></p>
+            <p class="text-sm text-[var(--text-secondary)]">Tanggal Bayar: <strong class="text-[var(--text-primary)]">${new Date(payment.tanggal + 'T00:00:00').toLocaleDateString('id-ID')}</strong></p>
+            <p class="text-sm text-[var(--text-secondary)]">Jumlah: <strong class="text-[var(--text-primary)]">${formatCurrency(payment.jumlah)}</strong></p>
+            <div class="mt-4">
+                <img src="${payment.proofUrl}" alt="Bukti Pembayaran" class="rounded-lg max-w-full h-auto mx-auto">
+            </div>
+        `;
+        lucide.createIcons();
+        openModal('geminiModal');
+    };
     // --- CONFIRMATION & DELETE LOGIC ---
         let confirmCallback = null;
         
@@ -1413,7 +2177,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 agenda: `Yakin ingin menghapus agenda ini?`,
                 kamar: `Yakin hapus tipe kamar "${db.roomTypes[id]?.name}"?`,
                 meetingRoom: `Yakin hapus ruang meeting "${db.meetingRooms[id]?.name}"?`,
-                paketMeeting: `Yakin hapus paket meeting "${db.meetingPackages[id]?.name}"?`
+                paketMeeting: `Yakin hapus paket meeting "${db.meetingPackages[id]?.name}"?`,
+                agendaType: `Yakin ingin menghapus tipe agenda ini? Ini tidak akan menghapus agenda yang sudah ada, tetapi mungkin menyebabkan tampilan tipe menjadi generik.`
             };
             document.getElementById('confirm-message').textContent = messageMap[type] || 'Apakah Anda yakin?';
             document.getElementById('confirm-title').textContent = 'Konfirmasi Hapus';
@@ -1427,18 +2192,6 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         };
         
-        window.confirmCancelBooking = (bookingId) => {
-            document.getElementById('confirm-message').textContent = `Yakin ingin membatalkan booking ${bookingId}? Aksi ini tidak dapat diurungkan.`;
-            document.getElementById('confirm-title').textContent = 'Konfirmasi Pembatalan';
-            const okBtn = document.getElementById('confirm-ok-btn');
-            okBtn.className = okBtn.className.replace(/bg-\w+-\d+/g, 'bg-yellow-600').replace(/hover:bg-\w+-\d+/g, 'hover:bg-yellow-700');
-            openModal('confirmModal');
-            confirmCallback = () => {
-                cancelBooking(bookingId);
-                closeModal('confirmModal');
-            };
-        };
-
         window.confirmDeleteBooking = (bookingId) => {
             document.getElementById('confirm-message').textContent = `Yakin ingin menghapus transaksi ${bookingId}? Aksi ini akan menghapus data secara permanen.`;
             document.getElementById('confirm-title').textContent = 'Konfirmasi Hapus Transaksi';
@@ -1459,6 +2212,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'kamar': delete db.roomTypes[id]; break;
                 case 'meetingRoom': delete db.meetingRooms[id]; break;
                 case 'paketMeeting': delete db.meetingPackages[id]; break;
+                case 'agendaType': 
+                    db.agendaTypes = db.agendaTypes.filter(t => t.id !== id); 
+                    populateAgendaTypeDropdown(); // Refresh dropdowns after delete
+                    break;
             }
             saveData();
             renderAll();
@@ -1490,130 +2247,177 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // --- PDF & BOOKING ACTIONS ---
-        window.confirmBooking = (bookingId) => {
-            const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
-            if (booking) {
-                booking.status = 'Terkonfirmasi';
-                saveData();
-                renderLaporanTable(document.getElementById('laporan-search').value);
-                showToast(`Booking ${bookingId} telah dikonfirmasi.`);
-            }
-        };
-        
-        window.cancelBooking = (bookingId) => {
-             const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
-            if (booking) {
-                booking.status = 'Batal';
-                saveData();
-                renderLaporanTable(document.getElementById('laporan-search').value);
-                showToast(`Booking ${bookingId} telah dibatalkan.`, 'error');
-            }
-        }
-
         window.generateInvoice = (bookingId) => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
-            if (!booking) return;
-            const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
-            if (!customer) return;
-            const paymentInfo = getPaymentInfo(bookingId);
-
-            // Add Logo
             try {
-                const logoUrl = db.settings.invoiceSettings.logoUrl;
-                if (logoUrl) {
-                    doc.addImage(logoUrl, 'PNG', 14, 15, 40, 13);
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
+                if (!booking) {
+                    showToast('Booking tidak ditemukan.', 'error');
+                    return;
                 }
-            } catch (e) { console.error("Error adding logo to PDF:", e); }
+                const companyProfile = db.settings.companyProfile;
+                const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
+                if (!customer) {
+                    showToast('Pelanggan untuk booking ini tidak ditemukan.', 'error');
+                    return;
+                }
+                const sales = db.users.find(u => u.id === booking.createdBy);
+                const paymentInfo = getPaymentInfo(bookingId);
 
-            doc.setFontSize(20);
-            doc.setFont("helvetica", "bold");
-            doc.text("INVOICE", 140, 22);
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            
-            doc.setFont("helvetica", "bold");
-            doc.text("Kepada:", 140, 40);
-            doc.setFont("helvetica", "normal");
-            doc.text(customer.nama, 140, 46);
-            doc.text(customer.perusahaan, 140, 50);
-            doc.text(customer.alamat, 140, 54);
-            
-            doc.text(`Invoice #: ${booking.id}`, 14, 50);
-            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 14, 54);
-            
-            let tableBody = [];
-            if (booking.tipeBooking === 'Kamar' && booking.rooms) {
-                // Calculate nights only if needed inside the loop
-                booking.rooms.forEach(room => {
-                    const nights = (new Date(booking.checkout) - new Date(booking.checkin)) / (1000 * 3600 * 24);
-                    let pricePerNight = room.basePrice;
-                    if (room.package === 'breakfast') {
-                        pricePerNight += (db.roomTypes[room.type]?.breakfastPrice || 0) * room.guests;
-                    }
-                    const lineTotal = room.count * pricePerNight * nights;
-                    tableBody.push([
-                        `${room.name} (${room.package === 'breakfast' ? 'Sarapan' : 'Room Only'})`,
-                        `${room.count} kamar x ${nights} malam`,
-                        formatCurrency(pricePerNight),
-                        formatCurrency(lineTotal)
-                    ]);
-                });
-            } else { 
-                 const subtotal = booking.totalHarga / (1 + (db.settings.taxAndServicePercentage / 100));
-                 const details = `Sewa Ruang Meeting (${db.meetingRooms[booking.roomKey]?.name})`;
-                 tableBody.push([details, `1 paket`, formatCurrency(subtotal), formatCurrency(subtotal)]);
-            }
+                // This is the existing invoice layout
+                try {
+                    const logoUrl = companyProfile.logoUrl;
+                    if (logoUrl) doc.addImage(logoUrl, 'PNG', 14, 15, 40, 13);
+                } catch (e) { console.error("Error adding logo to PDF:", e); }
 
-            doc.autoTable({
-                startY: 70,
-                head: [['Deskripsi', 'Kuantitas', 'Harga Satuan', 'Jumlah']],
-                body: tableBody,
-                theme: 'striped',
-                headStyles: { fillColor: [31, 41, 55] }
-            });
-
-            let finalY = doc.lastAutoTable.finalY;
-            const subtotal = booking.totalHarga / (1 + (db.settings.taxAndServicePercentage / 100));
-            const tax = booking.totalHarga - subtotal;
-
-            doc.setFontSize(10);
-            doc.text("Subtotal:", 140, finalY + 10);
-            doc.text(formatCurrency(subtotal), 190, finalY + 10, { align: 'right' });
-            doc.text(`Pajak & Layanan (${db.settings.taxAndServicePercentage}%):`, 140, finalY + 15);
-            doc.text(formatCurrency(tax), 190, finalY + 15, { align: 'right' });
-            
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "bold");
-            doc.text("Total Tagihan:", 140, finalY + 22);
-            doc.text(formatCurrency(booking.totalHarga), 190, finalY + 22, { align: 'right' });
-
-            if (paymentInfo.totalPaid > 0) {
                 doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text(companyProfile.name || 'Nama Perusahaan', 14, 35);
                 doc.setFont("helvetica", "normal");
-                doc.text("Sudah Dibayar:", 140, finalY + 27);
-                doc.text(formatCurrency(paymentInfo.totalPaid), 190, finalY + 27, { align: 'right' });
+                const addressLines = doc.splitTextToSize(companyProfile.address || 'Alamat Perusahaan', 80);
+                doc.text(addressLines, 14, 40);
+                const addressHeight = addressLines.length * 5;
+                doc.text(`Telp: ${companyProfile.phone || 'N/A'}`, 14, 40 + addressHeight);
+
+                doc.setFontSize(20);
+                doc.setFont("helvetica", "bold");
+                doc.text("INVOICE", 140, 22);
+                doc.setFontSize(10);
+                
+                doc.setFont("helvetica", "bold");
+                doc.text("Kepada:", 140, 40);
+                doc.setFont("helvetica", "normal");
+                doc.text(customer.nama, 140, 46);
+                doc.text(customer.perusahaan, 140, 50);
+                doc.text(customer.alamat, 140, 54);
+                
+                doc.text(`Invoice #: ${booking.id}`, 14, 70);
+                doc.text(`Tanggal: ${new Date(booking.tanggalBooking).toLocaleDateString('id-ID')}`, 14, 75);
+                doc.text(`Sales: ${sales ? sales.name : 'N/A'}`, 14, 80);
+                
+                let tableBody = [];
+                if (booking.tipeBooking === 'Kamar' && booking.rooms) {
+                    booking.rooms.forEach(room => {
+                        const nights = (new Date(booking.checkout) - new Date(booking.checkin)) / (1000 * 3600 * 24);
+                        let pricePerNight = room.basePrice;
+                        if (room.package === 'breakfast') {
+                            pricePerNight += (db.roomTypes[room.type]?.breakfastPrice || 0) * room.guests;
+                        }
+                        const lineTotal = room.count * pricePerNight * nights;
+                        tableBody.push([`${room.name} (${room.package === 'breakfast' ? 'Sarapan' : 'Room Only'})`, `${room.count} kamar x ${nights} malam`, formatCurrency(pricePerNight), formatCurrency(lineTotal)]);
+                    });
+                } else { 
+                     const subtotal = booking.totalHarga / (1 + (db.settings.taxAndServicePercentage / 100));
+                     const details = `Sewa Ruang Meeting (${db.meetingRooms[booking.roomKey]?.name})`;
+                     tableBody.push([details, `1 paket`, formatCurrency(subtotal), formatCurrency(subtotal)]);
+                }
+
+                doc.autoTable({ startY: 85, head: [['Deskripsi', 'Kuantitas', 'Harga Satuan', 'Jumlah']], body: tableBody, theme: 'striped', headStyles: { fillColor: [31, 41, 55] } });
+
+                let finalY = doc.lastAutoTable.finalY;
+                const subtotal = booking.totalHarga / (1 + (db.settings.taxAndServicePercentage / 100));
+                const tax = booking.totalHarga - subtotal;
+
+                doc.setFontSize(10);
+                doc.text("Subtotal:", 140, finalY + 10);
+                doc.text(formatCurrency(subtotal), 190, finalY + 10, { align: 'right' });
+                doc.text(`Pajak & Layanan (${db.settings.taxAndServicePercentage}%):`, 140, finalY + 15);
+                doc.text(formatCurrency(tax), 190, finalY + 15, { align: 'right' });
                 
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "bold");
-                doc.text("Sisa Tagihan:", 140, finalY + 34);
-                doc.text(formatCurrency(paymentInfo.balance), 190, finalY + 34, { align: 'right' });
-                finalY += 12; // Add extra space
-            }
+                doc.text("Total Tagihan:", 140, finalY + 22);
+                doc.text(formatCurrency(booking.totalHarga), 190, finalY + 22, { align: 'right' });
 
-            // Payment Notes
-            const paymentNotes = db.settings.invoiceSettings.paymentNotes;
-            if (paymentNotes) {
-                doc.setFontSize(9);
-                doc.setFont("helvetica", "normal");
-                doc.text("Catatan Pembayaran:", 14, finalY + 40);
-                doc.text(paymentNotes, 14, finalY + 44);
-            }
+                if (paymentInfo.totalPaid > 0) {
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Sudah Dibayar:", 140, finalY + 27);
+                    doc.text(formatCurrency(paymentInfo.totalVerifiedPaid), 190, finalY + 27, { align: 'right' });
+                    
+                    doc.setFontSize(12);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Sisa Tagihan:", 140, finalY + 34);
+                    doc.text(formatCurrency(paymentInfo.balance), 190, finalY + 34, { align: 'right' });
+                    finalY += 12;
+                }
 
-            doc.save(`Invoice-${booking.id}.pdf`);
+                const paymentNotes = db.settings.invoiceSettings.paymentNotes;
+                if (paymentNotes) {
+                    doc.setFontSize(9);
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Catatan Pembayaran:", 14, finalY + 40);
+                    doc.text(paymentNotes, 14, finalY + 44);
+                }
+
+                doc.save(`Invoice-${booking.id}.pdf`);
+            } catch (error) {
+                console.error("Gagal membuat PDF invoice:", error);
+                showToast('Terjadi kesalahan saat membuat invoice. Periksa console untuk detail.', 'error');
+            }
         };
+        function printPiutangReport() {
+            const filter = document.getElementById('pembayaran-search').value;
+            const salesId = document.getElementById('pembayaran-sales-filter').value;
+            const allBookings = [...db.kamarBookings, ...db.meetingBookings];
+
+            // Reuse filtering logic from renderPembayaranTable
+            let bookingsWithBalance = allBookings.filter(b => {
+                const paymentInfo = getPaymentInfo(b.id);
+                return paymentInfo.balance > 0 && b.status !== 'Batal';
+            }).sort((a, b) => new Date(b.tanggalBooking) - new Date(a.tanggalBooking));
+            
+            if (filter) {
+                bookingsWithBalance = bookingsWithBalance.filter(b => {
+                    const customer = db.pelanggan.find(p => p.id === b.pelangganId);
+                    const sales = db.users.find(u => u.id === b.createdBy);
+                    return b.id.toLowerCase().includes(filter.toLowerCase()) ||
+                           (customer && customer.nama.toLowerCase().includes(filter.toLowerCase())) ||
+                           (sales && sales.name.toLowerCase().includes(filter.toLowerCase()));
+                });
+            }
+
+            if (salesId !== 'all') {
+                const numericSalesId = parseInt(salesId);
+                bookingsWithBalance = bookingsWithBalance.filter(b => b.createdBy === numericSalesId);
+            }
+
+            if (bookingsWithBalance.length === 0) {
+                showToast('Tidak ada data piutang untuk dicetak.', 'info');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text('Laporan Piutang', 14, 22);
+            doc.setFontSize(11);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
+
+            let totalPiutang = 0;
+            const tableBody = bookingsWithBalance.map(b => {
+                const pelanggan = db.pelanggan.find(p => p.id === b.pelangganId);
+                const sales = db.users.find(u => u.id === b.createdBy);
+                const paymentInfo = getPaymentInfo(b.id);
+                const eventDate = b.tipeBooking === 'Kamar' ? b.checkin : b.tanggalMulai;
+                const formattedEventDate = new Date(eventDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                totalPiutang += paymentInfo.balance;
+
+                return [ b.id, pelanggan ? pelanggan.nama : 'N/A', sales ? sales.name : 'N/A', formattedEventDate, formatCurrency(b.totalHarga), formatCurrency(paymentInfo.balance) ];
+            });
+
+            const tableFooter = [
+                [{ content: 'Total Piutang', colSpan: 5, styles: { fontStyle: 'bold', halign: 'right' } },
+                 { content: formatCurrency(totalPiutang), styles: { fontStyle: 'bold' } }]
+            ];
+
+            doc.autoTable({ startY: 40, head: [['ID Booking', 'Pelanggan', 'Sales', 'Tanggal Event', 'Total Tagihan', 'Sisa Tagihan']], body: tableBody, foot: tableFooter, headStyles: { fillColor: [31, 41, 55] } });
+
+            doc.save(`Laporan-Piutang-${new Date().toISOString().split('T')[0]}.pdf`);
+        }
 
         window.generateConfirmationLetter = (bookingId) => {
             const { jsPDF } = window.jspdf;
@@ -1623,10 +2427,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!booking) return;
             const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
             if (!customer) return;
+            const sales = db.users.find(u => u.id === booking.createdBy);
+            const companyProfile = db.settings.companyProfile;
 
             // Add Logo
             try {
-                const logoUrl = db.settings.invoiceSettings.logoUrl;
+                const logoUrl = companyProfile.logoUrl;
                 if (logoUrl) {
                     doc.addImage(logoUrl, 'PNG', 14, 15, 40, 13);
                 }
@@ -1641,8 +2447,17 @@ document.addEventListener('DOMContentLoaded', function() {
             doc.setFont("helvetica", "normal");
             doc.text(`No: ${booking.id}`, 105, 28, { align: 'center' });
 
-            doc.line(14, 40, 196, 40);
+            // Company Info (Top-Right)
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.text(companyProfile.name || 'Nama Perusahaan', 196, 15, { align: 'right' });
+            doc.setFont("helvetica", "normal");
+            const addressLines = doc.splitTextToSize(companyProfile.address || 'Alamat Perusahaan', 60);
+            doc.text(addressLines, 196, 19, { align: 'right' });
+            const addressHeight = addressLines.length * 4;
+            doc.text(`Telp: ${companyProfile.phone || 'N/A'}`, 196, 19 + addressHeight, { align: 'right' });
 
+            doc.line(14, 40, 196, 40); // Separator line
             doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`, 14, 48);
             
             doc.setFont("helvetica", "bold");
@@ -1692,22 +2507,197 @@ document.addEventListener('DOMContentLoaded', function() {
 
             finalY += 25;
             doc.text("Hormat kami,", 14, finalY + 20);
-            doc.text(currentUser.name, 14, finalY + 40);
+            doc.text(sales ? sales.name : (currentUser.name || 'N/A'), 14, finalY + 40);
+            doc.text(companyProfile.name || 'Nama Perusahaan', 14, finalY + 45);
 
             doc.save(`Konfirmasi-${booking.id}.pdf`);
         };
         
+        window.generateMeetingConfirmationLetter = (bookingId) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const booking = db.meetingBookings.find(b => b.id === bookingId);
+            if (!booking) return;
+            const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
+            if (!customer) return;
+            const sales = db.users.find(u => u.id === booking.createdBy);
+            const companyProfile = db.settings.companyProfile;
+            const meetingRoom = db.meetingRooms[booking.roomKey];
+            const meetingPackage = db.meetingPackages[booking.packageKey];
+
+            // Add Logo
+            try {
+                const logoUrl = companyProfile.logoUrl;
+                if (logoUrl) {
+                    doc.addImage(logoUrl, 'PNG', 14, 15, 40, 13);
+                }
+            } catch (e) {
+                console.error("Error adding logo to PDF:", e);
+            }
+
+            doc.setFontSize(20);
+            doc.setFont("helvetica", "bold");
+            doc.text("Surat Konfirmasi Booking Ruang Meeting", 105, 22, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`No: ${booking.id}`, 105, 28, { align: 'center' });
+
+            // Company Info (Top-Right)
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.text(companyProfile.name || 'Nama Perusahaan', 196, 15, { align: 'right' });
+            doc.setFont("helvetica", "normal");
+            const addressLines = doc.splitTextToSize(companyProfile.address || 'Alamat Perusahaan', 60);
+            doc.text(addressLines, 196, 19, { align: 'right' });
+            const addressHeight = addressLines.length * 4;
+            doc.text(`Telp: ${companyProfile.phone || 'N/A'}`, 196, 19 + addressHeight, { align: 'right' });
+
+            doc.line(14, 40, 196, 40); // Separator line
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`, 14, 48);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("Kepada Yth.", 14, 60);
+            doc.setFont("helvetica", "normal");
+            doc.text(customer.nama, 14, 66);
+            doc.text(customer.perusahaan, 14, 70);
+            doc.text(customer.alamat, 14, 74);
+
+            doc.text("Dengan hormat,", 14, 84);
+            doc.text("Terima kasih telah memilih hotel kami untuk acara Anda. Dengan ini kami konfirmasikan detail pemesanan sebagai berikut:", 14, 90, { maxWidth: 180 });
+
+            const tableBody = [
+                ['Nama Ruang', meetingRoom ? meetingRoom.name : 'N/A'],
+                ['Paket Meeting', meetingPackage ? meetingPackage.name : 'N/A'],
+                ['Jumlah Peserta', `${booking.jumlahPax} orang`],
+                ['Tanggal Acara', `${new Date(booking.tanggalMulai + 'T00:00:00').toLocaleDateString('id-ID')} s/d ${new Date(booking.tanggalBerakhir + 'T00:00:00').toLocaleDateString('id-ID')}`],
+                ['Waktu Acara', `${booking.jamMulai} - ${booking.jamBerakhir}`],
+                ['Total Biaya', `${formatCurrency(booking.totalHarga)} (Termasuk Pajak & Layanan)`],
+            ];
+
+            doc.autoTable({ startY: 100, body: tableBody, theme: 'grid', styles: { cellPadding: 2 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } } });
+
+            let finalY = doc.lastAutoTable.finalY;
+            doc.text("Hormat kami,", 14, finalY + 20);
+            doc.text(sales ? sales.name : (currentUser.name || 'N/A'), 14, finalY + 40);
+            doc.text(companyProfile.name || 'Nama Perusahaan', 14, finalY + 45);
+            doc.save(`Konfirmasi-Meeting-${booking.id}.pdf`);
+        };
         // --- EVENT LISTENERS ---
         const sidebar = document.getElementById('sidebar'), sidebarToggle = document.getElementById('sidebar-toggle'), sidebarBackdrop = document.getElementById('sidebar-backdrop'), navLinks = document.querySelectorAll('.nav-link'), contentSections = document.querySelectorAll('.content-section'), pageTitle = document.getElementById('page-title');
         window.toggleSidebar = () => { sidebar.classList.toggle('-translate-x-full'); sidebarBackdrop.classList.toggle('hidden'); }
         sidebarToggle.addEventListener('click', window.toggleSidebar);
         sidebarBackdrop.addEventListener('click', window.toggleSidebar);
-        navLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); navLinks.forEach(l => l.classList.remove('active')); link.classList.add('active'); const targetId = link.getAttribute('data-target'); pageTitle.textContent = link.textContent.trim(); contentSections.forEach(s => s.id === targetId ? s.classList.remove('hidden') : s.classList.add('hidden')); if (window.innerWidth < 1024) window.toggleSidebar(); }); });
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                const targetId = link.getAttribute('data-target');
+                pageTitle.textContent = link.textContent.trim();
+                contentSections.forEach(s => s.id === targetId ? s.classList.remove('hidden') : s.classList.add('hidden'));
+
+                // Secara otomatis menyembunyikan sidebar saat item menu diklik pada layar kecil
+                if (window.innerWidth < 1024) {
+                    window.toggleSidebar();
+                }
+            });
+        });
 
         // Search Listeners
         document.getElementById('pelanggan-search').addEventListener('input', (e) => renderPelangganTable(e.target.value));
         document.getElementById('laporan-search').addEventListener('input', (e) => renderLaporanTable(e.target.value));
-        document.getElementById('pembayaran-search').addEventListener('input', (e) => renderPembayaranTable(e.target.value));
+        
+        const pembayaranSearchInput = document.getElementById('pembayaran-search');
+        const pembayaranSalesFilter = document.getElementById('pembayaran-sales-filter');
+        const handlePembayaranFilterChange = () => {
+            renderPembayaranTable(pembayaranSearchInput.value, pembayaranSalesFilter.value);
+        };
+        pembayaranSearchInput.addEventListener('input', handlePembayaranFilterChange);
+        pembayaranSalesFilter.addEventListener('change', handlePembayaranFilterChange);
+
+        // Dashboard Card Click Listeners
+        const piutangCard = document.getElementById('dashboard-piutang-card');
+        if (piutangCard) {
+            piutangCard.addEventListener('click', () => {
+                document.querySelector('.nav-link[data-target="pembayaran"]').click();
+            });
+        }
+
+        document.getElementById('print-piutang-btn').addEventListener('click', printPiutangReport);
+
+        // Notification Toggle Listener
+        const notificationToggle = document.getElementById('notification-toggle');
+        const notificationPanel = document.getElementById('notification-panel');
+
+        notificationToggle.addEventListener('click', (e) => {
+            e.stopPropagation(); // Mencegah event klik menyebar ke document
+            notificationPanel.classList.toggle('hidden');
+        });
+
+        // Menutup panel notifikasi jika klik di luar area
+        document.addEventListener('click', (e) => {
+            if (!notificationPanel.contains(e.target) && !notificationToggle.contains(e.target)) {
+                notificationPanel.classList.add('hidden');
+            }
+        });
+
+        // Notification Listeners
+        document.getElementById('notification-list').addEventListener('click', function(e) {
+            const item = e.target.closest('.notification-item');
+            if (!item) return;
+            e.preventDefault();
+
+            const notificationId = parseInt(item.dataset.id);
+            const targetId = item.dataset.targetId;
+            const type = item.dataset.type;
+
+            // Tandai sudah dibaca
+            const notification = db.notifications.find(n => n.id === notificationId);
+            if (notification && !notification.readBy.includes(currentUser.id)) {
+                notification.readBy.push(currentUser.id);
+                saveData();
+                renderNotifications();
+            }
+
+            // Aksi saat notifikasi diklik
+            if (type === 'verification' || type === 'payment_reminder') {
+                document.querySelector('.nav-link[data-target="pembayaran"]').click();
+                
+                setTimeout(() => {
+                    const row = document.querySelector(`#pembayaran-table-container tr[data-booking-id="${targetId}"]`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.classList.add('highlight');
+                        setTimeout(() => row.classList.remove('highlight'), 2500);
+                    } else {
+                        showToast(`Booking ID ${targetId} tidak ditemukan di daftar piutang.`, 'info');
+                    }
+                }, 100);
+            } else if (type === 'agenda_reminder') {
+                document.querySelector('.nav-link[data-target="agenda"]').click();
+
+                setTimeout(() => {
+                    const card = document.querySelector(`#agenda [data-agenda-id="${targetId}"]`);
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.classList.add('highlight-card');
+                        setTimeout(() => card.classList.remove('highlight-card'), 2500);
+                    } else {
+                        showToast(`Agenda ID ${targetId} tidak ditemukan.`, 'info');
+                    }
+                }, 100);
+            }
+
+            document.getElementById('notification-panel').classList.add('hidden');
+        });
+
+        document.getElementById('mark-all-read-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            db.notifications.forEach(n => { if (!n.readBy.includes(currentUser.id)) { n.readBy.push(currentUser.id); } });
+            saveData(); renderNotifications(); showToast('Semua notifikasi ditandai telah dibaca.');
+        });
 
         // Form Submissions
         document.getElementById('formTambahPelanggan').addEventListener('submit', function(e) { 
@@ -1729,10 +2719,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 db.pelanggan.push(pelangganData);
             }
             saveData(); 
-            renderAll(); 
+            // --- Optimization: Call specific render functions ---
+            renderPelangganTable();
+            updateDashboardCards();
+            populateAllDropdowns(); // Pelanggan dropdown needs update
             closeModal('pelangganModal'); 
             showToast(`Pelanggan berhasil ${id ? 'diperbarui' : 'ditambahkan'}!`); 
             this.reset(); 
+        });
+
+        document.getElementById('formCancellation').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const bookingId = document.getElementById('cancel-booking-id-input').value;
+            const reason = document.getElementById('cancellation-reason').value;
+
+            const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
+            if (booking) {
+                booking.status = 'Batal';
+                booking.cancellationReason = reason;
+                booking.cancelledBy = currentUser.id;
+                saveData();
+                renderAll();
+                closeModal('cancellationModal');
+                showToast(`Booking ${bookingId} berhasil dibatalkan.`, 'success');
+            } else {
+                showToast('Booking tidak ditemukan.', 'error');
+            }
         });
 
         document.getElementById('formPembayaran').addEventListener('submit', function(e) {
@@ -1743,6 +2755,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const metode = document.getElementById('payment-metode').value;
             const tipe = document.getElementById('payment-tipe').value;
             const catatan = document.getElementById('payment-catatan').value;
+            const proofPreview = document.getElementById('payment-proof-preview');
+            const proofUrl = proofPreview.src.startsWith('data:image') ? proofPreview.src : null;
             if (!bookingId || isNaN(jumlah) || jumlah <= 0 || !tanggal || !metode || !tipe) {
                 showToast('Harap lengkapi semua data pembayaran.', 'error');
                 return;
@@ -1755,8 +2769,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 metode,
                 tipe,
                 catatan,
+                proofUrl,
+                verified: false,
+                verifiedBy: null,
+                verificationNote: null,
                 createdBy: currentUser.id
             });
+
+            const booking = [...db.kamarBookings, ...db.meetingBookings].find(b => b.id === bookingId);
+            const customer = db.pelanggan.find(p => p.id === booking.pelangganId);
+            const customerName = customer ? customer.nama : `Booking ID ${bookingId}`;
+            createNotification(
+                `Pembayaran baru ${formatCurrency(jumlah)} dari ${customerName} perlu diverifikasi.`,
+                'verification',
+                bookingId
+            );
+
             saveData();
             renderAll();
             closeModal('paymentModal');
@@ -1813,6 +2841,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkout: document.getElementById('bk-checkout').value,
                 totalHarga: totalHarga,
                 status: 'Baru',
+                cancellationReason: null,
+                cancelledBy: null,
                 rooms: rooms,
                 createdBy: currentUser.id
             });
@@ -1832,8 +2862,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Total harga tidak boleh nol.', 'error');
                 return;
             }
+            const newBookingId = `BM-${Date.now()}`;
             db.meetingBookings.push({
-                id: `BM-${Date.now()}`,
+                id: newBookingId,
                 tipeBooking: 'Meeting',
                 pelangganId: parseInt(document.getElementById('bm-pelanggan').value),
                 tanggalBooking: new Date().toISOString(),
@@ -1843,14 +2874,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 jamBerakhir: document.getElementById('bm-jam-berakhir').value,
                 totalHarga: total,
                 status: 'Baru',
+                cancellationReason: null,
+                cancelledBy: null,
                 roomKey: document.getElementById('bm-tipe-ruang').value,
+                packageKey: document.getElementById('bm-paket').value,
+                jumlahPax: parseInt(document.getElementById('bm-jumlah-pax').value) || 0,
                 createdBy: currentUser.id
             });
             saveData();
             renderAll();
             showToast('Booking meeting berhasil disimpan!');
-            this.reset();
-            calculateMeetingTotalPrice();
+            lastMeetingBookingId = newBookingId;
+            document.getElementById('meeting-booking-actions-container').classList.remove('hidden');
         });
         
         document.getElementById('formKamar').addEventListener('submit', function(e) {
@@ -1863,9 +2898,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 'travel-agent': parseFloat(document.getElementById('kamar-harga-travel').value),
                 government: parseFloat(document.getElementById('kamar-harga-government').value),
             };
-            const breakfastPrice = parseFloat(document.getElementById('kamar-harga-sarapan').value);
+            const newBreakfastPrice = parseFloat(document.getElementById('kamar-harga-sarapan').value);
             const key = id || name.toLowerCase().replace(/\s+/g, '-');
-            db.roomTypes[key] = { name, prices, breakfastPrice };
+
+            // Track price history for existing rooms
+            if (id) {
+                const oldRoom = db.roomTypes[key];
+                if (oldRoom) {
+                    const historyEntry = {
+                        date: new Date().toISOString(),
+                        changedBy: currentUser.id,
+                        changes: []
+                    };
+
+                    // Compare segment prices
+                    for (const segment in prices) {
+                        if (prices[segment] !== oldRoom.prices[segment]) {
+                            historyEntry.changes.push(
+                                `Harga ${segment.replace('-', ' ')}: ${formatCurrency(oldRoom.prices[segment])} -> ${formatCurrency(prices[segment])}`
+                            );
+                        }
+                    }
+
+                    // Compare breakfast price
+                    if (newBreakfastPrice !== oldRoom.breakfastPrice) {
+                        historyEntry.changes.push(
+                            `Harga Sarapan: ${formatCurrency(oldRoom.breakfastPrice)} -> ${formatCurrency(newBreakfastPrice)}`
+                        );
+                    }
+
+                    if (historyEntry.changes.length > 0) {
+                        if (!db.roomTypes[key].priceHistory) db.roomTypes[key].priceHistory = [];
+                        db.roomTypes[key].priceHistory.push(historyEntry);
+                    }
+                }
+            }
+
+            const roomData = { name, prices, breakfastPrice: newBreakfastPrice };
+            if (!id) roomData.priceHistory = []; // Ensure new rooms have the history array
+            db.roomTypes[key] = { ...db.roomTypes[key], ...roomData };
+
             saveData();
             renderAll();
             closeModal('kamarModal');
@@ -1876,9 +2948,67 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('formPaketMeeting').addEventListener('submit', function(e) { e.preventDefault(); const id = document.getElementById('paket-meeting-id').value; const name = document.getElementById('paket-meeting-nama').value; const price = parseFloat(document.getElementById('paket-meeting-harga').value); const key = id || name.toLowerCase().replace(/\s+/g, '-'); db.meetingPackages[key] = { name, price }; saveData(); renderAll(); closeModal('paketMeetingModal'); showToast(`Paket meeting ${id ? 'diperbarui' : 'ditambahkan'}!`); });
 
+        document.getElementById('formAgendaType').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('agenda-type-id').value);
+            const name = document.getElementById('agenda-type-nama').value;
+
+            if (!name.trim()) {
+                showToast('Nama tipe agenda tidak boleh kosong.', 'error');
+                return;
+            }
+
+            if (id) {
+                const index = db.agendaTypes.findIndex(t => t.id === id);
+                if (index > -1) {
+                    db.agendaTypes[index].name = name;
+                }
+            } else {
+                db.agendaTypes.push({ id: Date.now(), name: name });
+            }
+            saveData();
+            renderAgendaTypeTable();
+            populateAgendaTypeDropdown();
+            closeModal('agendaTypeModal');
+            showToast(`Tipe agenda berhasil ${id ? 'diperbarui' : 'ditambahkan'}!`);
+        });
+
+        document.getElementById('formVerifikasi').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const selectedCheckboxes = document.querySelectorAll('input[name="payment-to-verify"]:checked');
+            const verificationNote = document.getElementById('verification-note').value;
+
+            if (selectedCheckboxes.length === 0) {
+                showToast('Pilih setidaknya satu pembayaran untuk diverifikasi.', 'error');
+                return;
+            }
+            if (!verificationNote.trim()) {
+                showToast('Catatan verifikasi tidak boleh kosong.', 'error');
+                return;
+            }
+
+            selectedCheckboxes.forEach(cb => {
+                const paymentId = parseInt(cb.value);
+                const payment = db.payments.find(p => p.id === paymentId);
+                if (payment) {
+                    payment.verified = true;
+                    payment.verifiedBy = currentUser.id;
+                    payment.verificationNote = verificationNote;
+                }
+            });
+
+            saveData();
+            renderAll();
+            closeModal('verificationModal');
+            showToast('Pembayaran berhasil diverifikasi!');
+        });
+
         document.getElementById('formAgenda').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = parseInt(document.getElementById('agenda-id').value);
+            const fotoPreview = document.getElementById('agenda-foto-preview');
+            const fotoUrl = fotoPreview.src.startsWith('data:image') ? fotoPreview.src : null;
+
             const agendaData = {
                 judul: document.getElementById('agenda-judul').value,
                 tipe: document.getElementById('agenda-tipe').value,
@@ -1888,15 +3018,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 jamSelesai: document.getElementById('agenda-jam-selesai').value,
                 lokasi: document.getElementById('agenda-lokasi').value,
                 catatan: document.getElementById('agenda-catatan').value,
+                fotoUrl: fotoUrl
             };
             if (id) {
                 const index = db.agenda.findIndex(a => a.id === id);
+                // Preserve existing photo if no new one is uploaded
+                if (!fotoUrl) {
+                    agendaData.fotoUrl = db.agenda[index].fotoUrl;
+                }
                 // Preserve existing status when editing
                 agendaData.status = db.agenda[index].status;
                 db.agenda[index] = { ...db.agenda[index], ...agendaData };
             } else {
                 agendaData.id = Date.now();
                 agendaData.status = 'Tentative'; // New agendas are always tentative
+                agendaData.createdBy = currentUser.id;
                 db.agenda.push(agendaData);
             }
             saveData();
@@ -1909,13 +3045,42 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const bulan = document.getElementById('target-bulan').value;
             const tahun = document.getElementById('target-tahun').value;
-            const target = parseFloat(document.getElementById('sales-target-input').value);
+            const overallTarget = parseFloat(document.getElementById('sales-target-input').value) || 0;
             const key = `${tahun}-${bulan}`;
-            db.targets[key] = target;
+
+            // Initialize target object for the month if it doesn't exist
+            if (!db.targets[key]) {
+                db.targets[key] = { overall: 0, sales: {}, segments: {} };
+            }
+
+            // Save overall target
+            db.targets[key].overall = overallTarget * 1000000;
+
+            // Save individual sales targets
+            db.targets[key].sales = {}; // Reset sales targets for the month
+            const salesTargetInputs = document.querySelectorAll('.sales-target-input');
+            salesTargetInputs.forEach(input => {
+                const salesId = input.dataset.salesId;
+                const salesTarget = parseFloat(input.value) || 0;
+                if (salesId && salesTarget > 0) {
+                    db.targets[key].sales[salesId] = salesTarget * 1000000;
+                }
+            });
+
+            // Save segment targets
+            db.targets[key].segments = {}; // Reset segment targets for the month
+            const segmentTargetInputs = document.querySelectorAll('.segment-target-input');
+            segmentTargetInputs.forEach(input => {
+                const segmentName = input.dataset.segmentName;
+                const segmentTarget = parseFloat(input.value) || 0;
+                if (segmentName && segmentTarget > 0) {
+                    db.targets[key].segments[segmentName] = segmentTarget * 1000000;
+                }
+            });
+
             saveData();
             renderAll();
-            closeModal('targetModal');
-            showToast(`Target untuk ${key} berhasil disimpan!`);
+            showToast(`Target untuk bulan ${bulan}/${tahun} berhasil disimpan!`);
         });
         document.getElementById('formUser').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1952,18 +3117,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             db.settings.taxAndServicePercentage = newPercentage;
-            saveData();
-            renderAll();
-            showToast('Pengaturan pajak & pelayanan berhasil diperbarui!');
-        });
-        
-        document.getElementById('formInvoiceSettings').addEventListener('submit', function(e) {
-            e.preventDefault();
-            db.settings.invoiceSettings.logoUrl = document.getElementById('invoice-logo-url').value;
             db.settings.invoiceSettings.paymentNotes = document.getElementById('invoice-payment-notes').value;
             saveData();
             renderAll();
-            showToast('Pengaturan invoice berhasil diperbarui!');
+            showToast('Pengaturan berhasil diperbarui!');
+        });
+
+        document.getElementById('formProfilPerusahaan').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newName = document.getElementById('profil-nama').value;
+            const newPhone = document.getElementById('profil-telepon').value;
+            const newAddress = document.getElementById('profil-alamat').value;
+            const newLogoUrl = document.getElementById('profil-logo-preview').src;
+
+            db.settings.companyProfile.name = newName;
+            db.settings.companyProfile.phone = newPhone;
+            db.settings.companyProfile.address = newAddress;
+            db.settings.companyProfile.logoUrl = newLogoUrl;
+
+            saveData();
+            showToast('Profil perusahaan berhasil diperbarui!');
+            updateGlobalLogo(newLogoUrl);
+            updatePageTitle(newName);
+        });
+
+        document.getElementById('profil-logo-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // --- Validation Start ---
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+                const maxSizeInBytes = 1 * 1024 * 1024; // 1MB
+
+                if (!allowedTypes.includes(file.type)) {
+                    showToast('Tipe file tidak valid. Harap unggah file gambar (JPG, PNG, GIF, WEBP, SVG).', 'error');
+                    e.target.value = ''; // Clear the input
+                    return;
+                }
+
+                if (file.size > maxSizeInBytes) {
+                    showToast('Ukuran file terlalu besar. Maksimal 1MB.', 'error');
+                    e.target.value = ''; // Clear the input
+                    return;
+                }
+                // --- Validation End ---
+
+                const reader = new FileReader();
+                const preview = document.getElementById('profil-logo-preview');
+                reader.onload = function(event) {
+                    preview.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
         });
         
         document.getElementById('formRoleSettings').addEventListener('submit', function(e) {
@@ -2029,7 +3233,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    locationInput.value = `${lat}, ${lon}`;
+                    updateMapAndMarker([lat, lon]);
                     this.disabled = false;
                 },
                 () => {
@@ -2040,14 +3244,48 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         });
 
+        document.getElementById('agenda-lokasi').addEventListener('change', function(e) {
+            const value = e.target.value;
+            if (/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(value)) {
+                const coords = value.split(',').map(Number);
+                updateMapAndMarker(coords);
+            }
+        });
+
+        document.getElementById('agenda-foto-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                const preview = document.getElementById('agenda-foto-preview');
+                reader.onload = function(event) {
+                    preview.src = event.target.result;
+                    preview.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
         // Settings Tab Listener
-        document.querySelectorAll('.tab-button').forEach(button => {
+        document.querySelectorAll('.settings-tab-button').forEach(button => {
             button.addEventListener('click', () => {
-                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.settings-tab-button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.id === button.dataset.target ? content.classList.remove('hidden') : content.classList.add('hidden');
+                document.querySelectorAll('#manajemen-pengaturan .tab-content').forEach(content => {
+                    content.classList.add('hidden');
                 });
+                document.getElementById(button.dataset.target).classList.remove('hidden');
+            });
+        });
+
+        // Inventory Tab Listener
+        document.querySelectorAll('.inventory-tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.inventory-tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                document.querySelectorAll('#manajemen-inventaris .inventory-tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(button.dataset.target).classList.remove('hidden');
             });
         });
 
@@ -2057,10 +3295,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 generateConfirmationLetter(lastRoomBookingId);
             }
         });
-        document.getElementById('print-invoice-btn').addEventListener('click', () => {
-            if (lastRoomBookingId) {
-                generateInvoice(lastRoomBookingId);
+
+        document.getElementById('print-meeting-confirmation-btn').addEventListener('click', () => {
+            if (lastMeetingBookingId) {
+                generateMeetingConfirmationLetter(lastMeetingBookingId);
             }
+        });
+
+        document.getElementById('new-meeting-booking-btn').addEventListener('click', () => {
+            document.getElementById('formBookingMeeting').reset();
+            document.getElementById('meeting-booking-actions-container').classList.add('hidden');
+            lastMeetingBookingId = null;
+            calculateMeetingTotalPrice();
         });
 
         document.getElementById('new-booking-btn').addEventListener('click', () => {
@@ -2074,11 +3320,25 @@ document.addEventListener('DOMContentLoaded', function() {
             lastRoomBookingId = null;
             calculateRoomTotalPrice();
         });
+
+        // Inject highlight style
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .highlight {
+                background-color: var(--accent) !important;
+                transition: background-color 0.5s ease-in-out;
+            }
+            .highlight-card {
+                background-color: var(--accent) !important;
+                transition: background-color 0.5s ease-in-out;
+            }`;
+        document.head.appendChild(style);
         
         // --- SALES REPORT LOGIC ---
         document.getElementById('generate-sales-report-btn').addEventListener('click', () => {
             const startDate = document.getElementById('report-start-date').value;
             const endDate = document.getElementById('report-end-date').value;
+            const salesId = document.getElementById('report-sales-filter').value;
 
             if (!startDate || !endDate) {
                 showToast('Harap pilih tanggal mulai dan selesai.', 'error');
@@ -2089,18 +3349,34 @@ document.addEventListener('DOMContentLoaded', function() {
             const end = new Date(endDate + 'T23:59:59');
 
             const allBookings = [...db.kamarBookings, ...db.meetingBookings];
-            currentSalesReportData = allBookings.filter(b => {
+            let filteredBookings = allBookings.filter(b => {
                 const bookingDate = new Date(b.tanggalBooking);
                 return bookingDate >= start && bookingDate <= end;
             });
 
+            let filteredAgendas = db.agenda.filter(a => {
+                const agendaDate = new Date(a.tanggal + 'T00:00:00');
+                return agendaDate >= start && agendaDate <= end;
+            });
+
+            if (salesId !== 'all') {
+                const numericSalesId = parseInt(salesId);
+                filteredBookings = filteredBookings.filter(b => b.createdBy === numericSalesId);
+                filteredAgendas = filteredAgendas.filter(a => a.createdBy === numericSalesId);
+            }
+
+            currentSalesReportData = filteredBookings;
+            currentSalesAgendaData = filteredAgendas;
+
             renderSalesReportTable(currentSalesReportData);
+            renderSalesAgendaReportTable(currentSalesAgendaData);
         });
 
         function renderSalesReportTable(data) {
             const container = document.getElementById('sales-report-container');
             const actionsContainer = document.getElementById('sales-report-actions');
             const aiContainer = document.getElementById('ai-summary-container');
+            document.getElementById('sales-agenda-report-section').classList.add('hidden');
 
             // Hide AI summary when a new report is generated
             aiContainer.classList.add('hidden');
@@ -2151,6 +3427,46 @@ document.addEventListener('DOMContentLoaded', function() {
             lucide.createIcons();
         }
 
+        function renderSalesAgendaReportTable(data) {
+            const container = document.getElementById('sales-agenda-report-container');
+            const section = document.getElementById('sales-agenda-report-section');
+
+            if (data.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            let tableHtml = `<table class="w-full text-left">
+                <thead><tr class="border-b border-[var(--border-color)]">
+                    <th class="p-3">Tanggal</th>
+                    <th class="p-3">Judul</th>
+                    <th class="p-3">Pelanggan</th>
+                    <th class="p-3">Tipe</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Sales</th>
+                </tr></thead>
+                <tbody>`;
+
+            data.forEach(a => {
+                const customer = db.pelanggan.find(p => p.id === a.pelangganId);
+                const sales = db.users.find(u => u.id === a.createdBy);
+
+                tableHtml += `<tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
+                    <td class="p-3">${new Date(a.tanggal + 'T00:00:00').toLocaleDateString('id-ID')}</td>
+                    <td class="p-3">${a.judul}</td>
+                    <td class="p-3">${customer ? customer.nama : 'N/A'}</td>
+                    <td class="p-3">${getAgendaTipeBadge(a.tipe)}</td>
+                    <td class="p-3">${getAgendaStatusBadge(a.status)}</td>
+                    <td class="p-3">${sales ? sales.name : 'N/A'}</td>
+                </tr>`;
+            });
+
+            tableHtml += `</tbody></table>`;
+            container.innerHTML = tableHtml;
+            section.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
         document.getElementById('print-sales-report-btn').addEventListener('click', () => {
             if (currentSalesReportData.length === 0) return;
 
@@ -2158,11 +3474,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const doc = new jsPDF();
             const startDate = document.getElementById('report-start-date').value;
             const endDate = document.getElementById('report-end-date').value;
+            const salesFilterEl = document.getElementById('report-sales-filter');
+            const selectedSalesName = salesFilterEl.value === 'all' ? 'Semua Sales' : salesFilterEl.options[salesFilterEl.selectedIndex].text;
 
             doc.setFontSize(18);
             doc.text('Laporan Pencapaian Sales', 14, 22);
             doc.setFontSize(11);
             doc.text(`Periode: ${startDate} s/d ${endDate}`, 14, 30);
+            doc.text(`Sales: ${selectedSalesName}`, 14, 35);
 
             const tableData = currentSalesReportData.map(b => {
                 const customer = db.pelanggan.find(p => p.id === b.pelangganId);
@@ -2184,12 +3503,41 @@ document.addEventListener('DOMContentLoaded', function() {
             ]);
 
             doc.autoTable({
-                startY: 38,
+                startY: 43,
                 head: [['ID Booking', 'Tanggal', 'Pelanggan', 'Tipe', 'Sales', 'Total']],
                 body: tableData,
                 headStyles: { fillColor: [31, 41, 55] },
                 footStyles: { fontStyle: 'bold' }
             });
+
+            if (currentSalesAgendaData.length > 0) {
+                doc.addPage();
+                doc.setFontSize(18);
+                doc.text('Laporan Detail Agenda Meeting', 14, 22);
+                doc.setFontSize(11);
+                doc.text(`Periode: ${startDate} s/d ${endDate}`, 14, 30);
+                doc.text(`Sales: ${selectedSalesName}`, 14, 35);
+
+                const agendaTableData = currentSalesAgendaData.map(a => {
+                    const customer = db.pelanggan.find(p => p.id === a.pelangganId);
+                    const sales = db.users.find(u => u.id === a.createdBy);
+                    return [
+                        new Date(a.tanggal + 'T00:00:00').toLocaleDateString('id-ID'),
+                        a.judul,
+                        customer ? customer.nama : 'N/A',
+                        a.tipe,
+                        a.status,
+                        sales ? sales.name : 'N/A'
+                    ];
+                });
+
+                doc.autoTable({
+                    startY: 43,
+                    head: [['Tanggal', 'Judul', 'Pelanggan', 'Tipe', 'Status', 'Sales']],
+                    body: agendaTableData,
+                    headStyles: { fillColor: [31, 41, 55] }
+                });
+            }
 
             doc.save(`Laporan-Sales-${startDate}-to-${endDate}.pdf`);
         });
@@ -2199,6 +3547,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const startDate = document.getElementById('report-start-date').value;
             const endDate = document.getElementById('report-end-date').value;
+            const salesFilterEl = document.getElementById('report-sales-filter');
+            const selectedSalesName = salesFilterEl.value === 'all' ? 'Semua-Sales' : salesFilterEl.options[salesFilterEl.selectedIndex].text.replace(/\s+/g, '-');
 
             const dataToExport = currentSalesReportData.map(b => {
                 const customer = db.pelanggan.find(p => p.id === b.pelangganId);
@@ -2216,16 +3566,35 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Sales');
-
             // Set column widths
             worksheet['!cols'] = [
                 { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, 
                 { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 } 
             ];
 
-            XLSX.writeFile(workbook, `Laporan-Sales-${startDate}-to-${endDate}.xlsx`);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Sales');
+
+            if (currentSalesAgendaData.length > 0) {
+                const agendaDataToExport = currentSalesAgendaData.map(a => {
+                    const customer = db.pelanggan.find(p => p.id === a.pelangganId);
+                    const sales = db.users.find(u => u.id === a.createdBy);
+                    return {
+                        'Tanggal': new Date(a.tanggal + 'T00:00:00').toLocaleDateString('id-ID'),
+                        'Judul': a.judul,
+                        'Pelanggan': customer ? customer.nama : 'N/A',
+                        'Tipe': a.tipe,
+                        'Status': a.status,
+                        'Sales': sales ? sales.name : 'N/A',
+                        'Catatan': a.catatan
+                    };
+                });
+                const agendaWorksheet = XLSX.utils.json_to_sheet(agendaDataToExport);
+                agendaWorksheet['!cols'] = [ { wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 40 } ];
+                XLSX.utils.book_append_sheet(workbook, agendaWorksheet, 'Laporan Agenda');
+            }
+
+            XLSX.writeFile(workbook, `Laporan-Sales-${selectedSalesName}-${startDate}-to-${endDate}.xlsx`);
         });
 
         // --- AI FEATURE LISTENERS ---
@@ -2328,7 +3697,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // --- INITIALIZATION ---
-        function initTargetModal() {
+        function initTargetPage() {
             const bulanSelect = document.getElementById('target-bulan');
             const tahunSelect = document.getElementById('target-tahun');
             const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -2348,19 +3717,54 @@ document.addEventListener('DOMContentLoaded', function() {
             bulanSelect.value = String(now.getMonth() + 1).padStart(2, '0');
             tahunSelect.value = now.getFullYear();
 
-            function loadTargetValue() {
+            function loadTargetValues() {
                 const key = `${tahunSelect.value}-${bulanSelect.value}`;
-                const targetInput = document.getElementById('sales-target-input');
-                targetInput.value = db.targets[key] || '';
+                const monthlyTarget = db.targets[key];
+
+                // Load overall target
+                const overallTargetInput = document.getElementById('sales-target-input');
+                overallTargetInput.value = monthlyTarget?.overall ? monthlyTarget.overall / 1000000 : '';
+
+                // Load individual sales targets
+                const salesListContainer = document.getElementById('sales-target-list');
+                salesListContainer.innerHTML = '';
+                const salesUsers = db.users.filter(u => u.role === 'Sales');
+                
+                salesUsers.forEach(user => {
+                    const userTarget = monthlyTarget?.sales?.[user.id] ? monthlyTarget.sales[user.id] / 1000000 : '';
+                    const userHtml = `
+                        <div class="flex items-center gap-4">
+                            <label for="sales-target-${user.id}" class="w-1/3 text-sm text-[var(--text-secondary)]">${user.name}</label>
+                            <input type="number" id="sales-target-${user.id}" data-sales-id="${user.id}" value="${userTarget}" class="sales-target-input w-2/3 bg-[var(--bg-secondary)] border-[var(--border-color)] rounded-md p-2" placeholder="Target (Juta)">
+                        </div>`;
+                    salesListContainer.innerHTML += userHtml;
+                });
+
+                // Load segment targets
+                const segmentListContainer = document.getElementById('segment-target-list');
+                segmentListContainer.innerHTML = '';
+                const segments = ['Corporate', 'Individual', 'Travel Agent', 'Government'];
+
+                segments.forEach(segment => {
+                    const segmentKey = segment;
+                    const segmentTarget = monthlyTarget?.segments?.[segmentKey] ? monthlyTarget.segments[segmentKey] / 1000000 : '';
+                    const segmentHtml = `
+                        <div class="flex items-center gap-4">
+                            <label for="segment-target-${segmentKey.replace(' ', '')}" class="w-1/3 text-sm text-[var(--text-secondary)]">${segment}</label>
+                            <input type="number" id="segment-target-${segmentKey.replace(' ', '')}" data-segment-name="${segmentKey}" value="${segmentTarget}" class="segment-target-input w-2/3 bg-[var(--bg-secondary)] border-[var(--border-color)] rounded-md p-2" placeholder="Target (Juta)">
+                        </div>`;
+                    segmentListContainer.innerHTML += segmentHtml;
+                });
             }
 
-            bulanSelect.addEventListener('change', loadTargetValue);
-            tahunSelect.addEventListener('change', loadTargetValue);
+            bulanSelect.addEventListener('change', loadTargetValues);
+            tahunSelect.addEventListener('change', loadTargetValues);
             
             }
 
         loadData();
-        initTargetModal();
-        loadTheme();
+        updateGlobalLogo(db.settings.companyProfile.logoUrl);
+        updatePageTitle(db.settings.companyProfile.name);
+        initTargetPage();
         checkSession();
     });

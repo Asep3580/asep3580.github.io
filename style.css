@@ -4,33 +4,17 @@
     --bg-secondary: #ffffff;
     --bg-tertiary: #f1f5f9;
     --bg-hover: #f8fafc;
-    --text-primary: #1e293b;
+    --text-primary: #083c90;
     --text-secondary: #64748b;
     --border-color: #e2e8f0;
     --accent: #3b82f6;
     --accent-hover: #2563eb;
-}
-[data-theme="dark-blue"] {
-    --bg-primary: #111827;
-    --bg-secondary: #1f2937;
-    --bg-tertiary: #374151;
-    --bg-hover: #374151;
-    --text-primary: #f3f4f6;
-    --text-secondary: #9ca3af;
-    --border-color: #374151;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-}
-[data-theme="forest-green"] {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --bg-hover: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --border-color: #334155;
-    --accent: #22c55e;
-    --accent-hover: #16a34a;
+    --accent-content: #ffffff;
+    --accent-blue: #3b82f6;
+    --accent-yellow: #f59e0b;
+    --accent-purple: #8b5cf6;
+    --accent-green: #22c55e;
+    --accent-red: #ef4444;
 }
 
 /* Custom scrollbar */
@@ -40,8 +24,11 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
 /* Active nav link style */
-.nav-link.active { background-color: var(--accent); color: white; }
-.nav-link.active i { color: white; }
+.nav-link.active {
+    background-color: var(--accent);
+    color: var(--accent-content);
+}
+.nav-link.active i { color: var(--accent-content); }
 
 /* Toast Notification */
 #toast-notification {
@@ -81,6 +68,21 @@
     animation: fadeIn 0.5s ease-out forwards;
 }
 
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: var(--border-color);
+}
+.stat-card[data-color="blue"]::before { background-color: var(--accent-blue); }
+.stat-card[data-color="yellow"]::before { background-color: var(--accent-yellow); }
+.stat-card[data-color="purple"]::before { background-color: var(--accent-purple); }
+.stat-card[data-color="green"]::before { background-color: var(--accent-green); }
+.stat-card[data-color="red"]::before { background-color: var(--accent-red); }
+
 /* FullCalendar Customizations */
 .fc {
     background-color: var(--bg-secondary);
@@ -109,5 +111,5 @@
         var(--accent) 10px,
         var(--accent-hover) 10px,
         var(--accent-hover) 20px
-        ) !important;
-    }
+    ) !important;
+}

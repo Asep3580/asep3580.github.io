@@ -21,9 +21,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- FullCalendar for Calendar View -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <!-- Leaflet.js for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Link to your new external stylesheet -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- Tailwind CSS Component Styles (for CDN) -->
+    <style type="text/tailwindcss">
+        @layer components {
+            .stat-card {
+                @apply bg-[var(--bg-secondary)] p-4 lg:p-6 rounded-lg shadow-lg relative overflow-hidden flex flex-col justify-between;
+            }
+        }
+    </style>
 </head>
 <body class="bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased">
 
@@ -36,7 +48,7 @@
     <div id="login-container" class="flex items-center justify-center min-h-screen">
         <div class="w-full max-w-md p-8 space-y-8 bg-[var(--bg-secondary)] rounded-lg shadow-lg">
             <div class="text-center">
-                <img src="https://photos.fife.usercontent.google.com/pw/AP1GczNjud2HpuPHSylZHvDtqliIUxSEFn_lRoaNdT4lG6ncX27HFexBL0wq=w1024-h496-s-no-gm?authuser=0" alt="Logo Hotel" class="mx-auto mb-4 h-16 w-auto">
+                <img id="login-logo" src="assets/logo.png" alt="Logo Hotel" class="mx-auto mb-4 h-17 w-auto">
                 <h2 class="text-2xl font-bold text-[var(--text-primary)]">Please Login</h2>
                 <p class="mt-2 text-sm text-[var(--text-secondary)]">Enter your credentials to continue</p>
             </div>
@@ -65,9 +77,9 @@
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 z-20 hidden lg:hidden"></div>
         
         <!-- Sidebar Navigation -->
-        <aside id="sidebar" class="bg-[var(--bg-secondary)] text-[var(--text-primary)] w-64 fixed inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-30 flex flex-col">
+        <aside id="sidebar" class="bg-[var(--bg-secondary)] text-[var(--text-primary)] w-64 fixed inset-y-0 left-0 transform -translate-x-full lg:h-screen lg:sticky lg:top-0 lg:translate-x-0 transition-transform duration-300 ease-in-out z-30 flex flex-col">
             <div class="p-5 border-b border-[var(--border-color)] flex items-center space-x-4">
-                <img src="https://photos.fife.usercontent.google.com/pw/AP1GczNjud2HpuPHSylZHvDtqliIUxSEFn_lRoaNdT4lG6ncX27HFexBL0wq=w1024-h496-s-no-gm?authuser=0" alt="Logo Hotel" class="h-10 w-auto">
+                <img id="sidebar-logo" src="assets/logo.png" alt="Logo Hotel" class="h-15 w-auto">
             </div>
             <nav class="p-4 flex-1 overflow-y-auto">
                 <a href="#" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200 active" data-target="dashboard">
@@ -106,9 +118,8 @@
                 </div>
                 <div id="manajemen-menu" class="mt-4 pt-4 border-t border-[var(--border-color)]">
                     <h3 class="px-4 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Manajemen</h3>
-                    <a href="#" id="nav-manajemen-user" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-user">
-                        <i data-lucide="user-cog" class="w-5 h-5 mr-3"></i> User
-                    </a>
+                    <a href="#" id="nav-manajemen-user" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-user"><i data-lucide="user-cog" class="w-5 h-5 mr-3"></i> User</a>
+                    <a href="#" id="nav-manajemen-target" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-target"><i data-lucide="target" class="w-5 h-5 mr-3"></i> Target</a>
                     <a href="#" id="nav-manajemen-inventaris" class="nav-link flex items-center px-4 py-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-200" data-target="manajemen-inventaris">
                         <i data-lucide="archive" class="w-5 h-5 mr-3"></i> Inventaris & Harga
                     </a>
@@ -117,26 +128,37 @@
                     </a>
                 </div>
             </nav>
+            <!-- Logout Button -->
+            <div class="p-4 mt-auto border-t border-[var(--border-color)]">
+                <button id="sidebar-logout-button" class="w-full flex items-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors duration-200">
+                    <i data-lucide="log-out" class="w-5 h-5 mr-3"></i> Logout
+                </button>
+            </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        <main class="flex-1 flex flex-col">
             <header class="bg-[var(--bg-secondary)]/50 backdrop-blur-sm sticky top-0 z-10 p-4 flex justify-between items-center border-b border-[var(--border-color)] flex-shrink-0">
                 <div class="flex items-center">
                     <button id="sidebar-toggle" class="p-2 rounded-md hover:bg-[var(--bg-hover)] mr-4">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
-                    <h2 id="page-title" class="text-xl font-semibold text-[var(--text-primary)]">Dashboard</h2>
+                    <h2 id="page-title" class="text-lg md:text-xl font-semibold text-[var(--text-primary)]">Dashboard</h2>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <div class="relative">
-                        <button id="theme-toggle" class="p-2 rounded-full hover:bg-[var(--bg-hover)]">
-                            <i data-lucide="palette" class="w-5 h-5"></i>
+                    <div id="notification-container" class="relative hidden">
+                        <button id="notification-toggle" class="p-2 rounded-full hover:bg-[var(--bg-hover)] relative">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <span id="notification-badge" class="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[var(--bg-secondary)] hidden"></span>
                         </button>
-                        <div id="theme-menu" class="absolute right-0 mt-2 w-48 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-lg hidden z-20">
-                            <a href="#" data-theme="dark-blue" class="theme-option block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">Biru Gelap</a>
-                            <a href="#" data-theme="light" class="theme-option block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">Terang</a>
-                            <a href="#" data-theme="forest-green" class="theme-option block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">Hutan Hijau</a>
+                        <div id="notification-panel" class="absolute right-0 mt-2 w-80 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-lg hidden z-20">
+                            <div class="p-3 font-semibold border-b border-[var(--border-color)] flex justify-between items-center">
+                                <span>Notifikasi</span>
+                                <a href="#" id="mark-all-read-btn" class="text-xs font-normal text-blue-400 hover:underline">Tandai semua dibaca</a>
+                            </div>
+                            <div id="notification-list" class="max-h-80 overflow-y-auto">
+                                <!-- Notifications will be rendered here -->
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center space-x-3">
@@ -144,40 +166,47 @@
                         <div>
                             <p id="user-name-display" class="font-semibold text-[var(--text-primary)]">Nama User</p>
                             <p id="user-role-display" class="text-xs text-[var(--text-secondary)]">Role</p>
-                        </div>
-                        <button id="logout-button" title="Logout" class="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-full">
-                            <i data-lucide="log-out" class="w-5 h-5"></i>
-                        </button>
                     </div>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-6 md:p-8">
+            <div class="p-6 md:p-8">
                 <!-- Dashboard Content -->
                 <section id="dashboard" class="content-section">
-                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 bg-blue-500/20 rounded-full"><i data-lucide="dollar-sign" class="w-6 h-6 text-blue-400"></i></div><div class="ml-4"><p class="text-sm text-[var(--text-secondary)]">Pendapatan Bulan Ini</p><p id="dashboard-pendapatan" class="text-2xl font-bold text-[var(--text-primary)]">Rp 0</p></div></div></div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 bg-yellow-500/20 rounded-full"><i data-lucide="trending-down" class="w-6 h-6 text-yellow-400"></i></div><div class="ml-4"><p class="text-sm text-[var(--text-secondary)]">Total Piutang</p><p id="dashboard-piutang" class="text-2xl font-bold text-[var(--text-primary)]">Rp 0</p></div></div></div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 bg-purple-500/20 rounded-full"><i data-lucide="calendar-check" class="w-6 h-6 text-purple-400"></i></div><div class="ml-4"><p class="text-sm text-[var(--text-secondary)]">Agenda Hari Ini</p><p id="dashboard-agenda" class="text-2xl font-bold text-[var(--text-primary)]">0</p></div></div></div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 bg-green-500/20 rounded-full"><i data-lucide="book-check" class="w-6 h-6 text-green-400"></i></div><div class="ml-4"><p class="text-sm text-[var(--text-secondary)]">Booking Bulan Ini</p><p id="dashboard-booking" class="text-2xl font-bold text-[var(--text-primary)]">0</p></div></div></div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 bg-red-500/20 rounded-full"><i data-lucide="user-plus" class="w-6 h-6 text-red-400"></i></div><div class="ml-4"><p class="text-sm text-[var(--text-secondary)]">Total Pelanggan</p><p id="dashboard-pelanggan" class="text-2xl font-bold text-[var(--text-primary)]">0</p></div></div></div>
-                     </div>
-                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                             <div class="flex justify-between items-center mb-4">
-                                 <h3 class="text-lg font-semibold">Target Sales Bulan Ini <span id="sales-target-display"></span></h3>
-                                 <button class="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md flex items-center text-sm" onclick="openModal('targetModal')"><i data-lucide="settings-2" class="w-4 h-4 mr-2"></i> Set Target</button>
-                             </div>
-                             <div class="h-64"><canvas id="salesTargetChart"></canvas></div>
-                         </div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                             <h3 class="text-lg font-semibold mb-4">Pencapaian per Sales (Bulan Ini)</h3>
-                             <div class="h-64"><canvas id="salespersonChart"></canvas></div>
-                         </div>
-                         <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg lg:col-span-2">
-                             <h3 class="text-lg font-semibold mb-4">Pendapatan per Segmen (Bulan Ini)</h3>
-                             <div class="h-64"><canvas id="segmentChart"></canvas></div>
-                         </div>
+                     <div class="space-y-8">
+                        <!-- Stat Cards Row -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <div class="stat-card" data-color="blue"><div class="flex items-center gap-4"><div class="w-12 h-12 bg-[var(--accent-blue)] rounded-full flex-shrink-0 flex items-center justify-center"><span class="font-bold text-xl text-[var(--accent-content)]">Rp</span></div><p class="text-sm text-[var(--text-secondary)]">Pendapatan Bulan Ini</p></div><p id="dashboard-pendapatan" class="text-center text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mt-2">Rp 0</p></div>
+                            <div id="dashboard-piutang-card" class="stat-card cursor-pointer" data-color="yellow"><div class="flex items-center gap-4"><div class="p-3 bg-[var(--accent-yellow)] rounded-full flex-shrink-0"><i data-lucide="trending-down" class="w-6 h-6 text-[var(--accent-content)]"></i></div><p class="text-sm text-[var(--text-secondary)]">Total Piutang</p></div><p id="dashboard-piutang" class="text-center text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mt-2">Rp 0</p></div>
+                            <div class="stat-card" data-color="purple"><div class="flex items-center gap-4"><div class="p-3 bg-[var(--accent-purple)] rounded-full flex-shrink-0"><i data-lucide="calendar-check" class="w-6 h-6 text-[var(--accent-content)]"></i></div><p class="text-sm text-[var(--text-secondary)]">Agenda Hari Ini</p></div><p id="dashboard-agenda" class="text-center text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mt-2">0</p></div>
+                            <div class="stat-card" data-color="green"><div class="flex items-center gap-4"><div class="p-3 bg-[var(--accent-green)] rounded-full flex-shrink-0"><i data-lucide="book-check" class="w-6 h-6 text-[var(--accent-content)]"></i></div><p class="text-sm text-[var(--text-secondary)]">Booking Bulan Ini</p></div><p id="dashboard-booking" class="text-center text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mt-2">0</p></div>
+                            <div class="stat-card" data-color="red"><div class="flex items-center gap-4"><div class="p-3 bg-[var(--accent-red)] rounded-full flex-shrink-0"><i data-lucide="user-plus" class="w-6 h-6 text-[var(--accent-content)]"></i></div><p class="text-sm text-[var(--text-secondary)]">Total Pelanggan</p></div><p id="dashboard-pelanggan" class="text-center text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mt-2">0</p></div>
+                        </div>
+
+                        <!-- Charts Row -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-semibold">Target Sales Bulan Ini <span id="sales-target-display"></span></h3>
+                                </div>
+                                <div class="relative h-64"><canvas id="salesTargetChart"></canvas></div>
+                            </div>
+                            <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg flex flex-col">
+                                <h3 class="text-lg font-semibold mb-4">Agenda Prioritas</h3>
+                                <div id="dashboard-agenda-list" class="h-64 space-y-3 overflow-y-auto pr-2 flex-1"></div>
+                            </div>
+                            <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                                <h3 class="text-lg font-semibold mb-4">Pencapaian Target per Segmen</h3>
+                                <div class="h-64"><canvas id="segmentTargetChart"></canvas></div>
+                            </div>
+                            <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                                <h3 class="text-lg font-semibold mb-4">Pendapatan per Tipe Booking (Bulan Ini)</h3>
+                                <div class="h-64"><canvas id="bookingTypeChart"></canvas></div>
+                            </div>
+                            <div id="individual-sales-targets" class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg lg:col-span-2">
+                               <!-- Individual sales target progress will be rendered here by JS -->
+                            </div>
+                        </div>
                      </div>
                 </section>
                 
@@ -212,11 +241,11 @@
                                 <h4 class="text-md font-semibold text-blue-400 mb-2">Hari Ini</h4>
                                 <div id="agenda-hari-ini" class="space-y-3"></div>
                             </div>
-                             <div>
+                             <div class="border-t border-[var(--border-color)] pt-6">
                                 <h4 class="text-md font-semibold text-yellow-400 mb-2">Akan Datang</h4>
                                 <div id="agenda-akan-datang" class="space-y-3"></div>
                             </div>
-                             <div>
+                             <div class="border-t border-[var(--border-color)] pt-6">
                                 <h4 class="text-md font-semibold text-gray-500 mb-2">Selesai</h4>
                                 <div id="agenda-selesai" class="space-y-3"></div>
                             </div>
@@ -315,16 +344,13 @@
                                 </div>
                                 <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-[var(--border-color)]">
                                     <span class="text-lg font-semibold">Total Harga:</span>
-                                    <span id="bk-total-harga" class="text-2xl font-bold text-[var(--accent)]">Rp 0</span>
+                                    <span id="bk-total-harga" class="text-xl md:text-2xl font-bold text-[var(--accent)]">Rp 0</span>
                                 </div>
                             </div>
                             <div class="pt-6 flex justify-between items-center">
                                 <div id="booking-actions-container" class="space-x-4 hidden">
                                     <button type="button" id="print-confirmation-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
                                         <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> Print Surat Konfirmasi
-                                    </button>
-                                    <button type="button" id="print-invoice-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
-                                        <i data-lucide="receipt" class="w-4 h-4 mr-2"></i> Print Invoice
                                     </button>
                                 </div>
                                 <button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center ml-auto">
@@ -338,7 +364,12 @@
                 <!-- Booking Ruang Meeting Content -->
                 <div id="booking-meeting" class="content-section hidden">
                     <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                        <h3 class="text-lg font-semibold mb-6">Buat Booking Ruang Meeting Baru</h3>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-semibold">Buat Booking Ruang Meeting Baru</h3>
+                            <button type="button" id="new-meeting-booking-btn" class="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] font-bold py-2 px-4 rounded-md flex items-center text-sm">
+                                <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Booking Baru
+                            </button>
+                        </div>
                         <form id="formBookingMeeting" class="space-y-4">
                             <div><label for="bm-pelanggan" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Pilih Pelanggan</label><select id="bm-pelanggan" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]" required><option value="">-- Pilih --</option></select></div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -369,10 +400,19 @@
                                 </div>
                                 <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-[var(--border-color)]">
                                     <span class="text-lg font-semibold">Total Harga:</span>
-                                    <span id="bm-total-harga" class="text-2xl font-bold text-[var(--accent)]">Rp 0</span>
+                                    <span id="bm-total-harga" class="text-xl md:text-2xl font-bold text-[var(--accent)]">Rp 0</span>
                                 </div>
                             </div>
-                            <div class="pt-6 flex justify-end"><button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan Booking</button></div>
+                            <div class="pt-6 flex justify-between items-center">
+                                <div id="meeting-booking-actions-container" class="space-x-4 hidden">
+                                    <button type="button" id="print-meeting-confirmation-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
+                                        <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> Print Surat Konfirmasi
+                                    </button>
+                                </div>
+                                <button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center ml-auto">
+                                    <i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan Booking
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -390,26 +430,36 @@
                     </div>
                 </div>
                 
-                <!-- Manajemen Inventaris Content -->
+                <!-- Manajemen Inventaris Content (New Tabbed Layout) -->
                 <div id="manajemen-inventaris" class="content-section hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                        <h3 class="text-lg font-semibold mb-4">Manajemen Inventaris & Harga</h3>
+                        <!-- Tabs -->
+                        <div class="border-b border-[var(--border-color)]">
+                            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                                <button class="inventory-tab-button tab-button active" data-target="tab-kamar">Tipe Kamar</button>
+                                <button class="inventory-tab-button tab-button" data-target="tab-ruang-meeting">Ruang Meeting</button>
+                                <button class="inventory-tab-button tab-button" data-target="tab-paket-meeting">Paket Meeting</button>
+                            </nav>
+                        </div>
+                        <!-- Tab Content -->
+                        <div id="tab-kamar" class="inventory-tab-content py-6">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Manajemen Tipe Kamar</h3>
+                                <h3 class="text-lg font-semibold">Detail Harga Tipe Kamar</h3>
                                 <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center text-sm" onclick="openKamarModal()"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah</button>
                             </div>
                             <div id="inventaris-kamar-table-container" class="overflow-x-auto"></div>
                         </div>
-                        <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                        <div id="tab-ruang-meeting" class="inventory-tab-content hidden py-6">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Manajemen Ruang Meeting</h3>
+                                <h3 class="text-lg font-semibold">Detail Harga Ruang Meeting</h3>
                                 <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center text-sm" onclick="openMeetingRoomModal()"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah</button>
                             </div>
                             <div id="inventaris-meeting-table-container"></div>
                         </div>
-                        <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
+                        <div id="tab-paket-meeting" class="inventory-tab-content hidden py-6">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Manajemen Paket Meeting</h3>
+                                <h3 class="text-lg font-semibold">Detail Harga Paket Meeting</h3>
                                 <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center text-sm" onclick="openPaketMeetingModal()"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah</button>
                             </div>
                             <div id="inventaris-paket-meeting-table-container"></div>
@@ -424,36 +474,46 @@
                         <!-- Tabs -->
                         <div class="border-b border-[var(--border-color)]">
                             <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                                <button class="tab-button active" data-target="tab-pajak">Pajak & Pelayanan</button>
-                                <button class="tab-button" data-target="tab-invoice">Tampilan Invoice</button>
-                                <button class="tab-button" data-target="tab-role">Pengaturan Role</button>
+                                <button class="settings-tab-button tab-button active" data-target="tab-profil">Profil Perusahaan</button>
+                                <button class="settings-tab-button tab-button" data-target="tab-pajak">Pajak & Pelayanan</button>
+                                <button class="settings-tab-button tab-button" data-target="tab-agenda-type">Tipe Agenda</button>
+                                <button class="settings-tab-button tab-button" data-target="tab-role">Pengaturan Role</button>
                             </nav>
                         </div>
                         <!-- Tab Content -->
-                        <div id="tab-pajak" class="tab-content py-6">
+                        <div id="tab-profil" class="tab-content py-6">
+                             <form id="formProfilPerusahaan">
+                                 <div class="space-y-6">
+                                     <div>
+                                         <label for="profil-nama" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Nama Perusahaan</label>
+                                         <input type="text" id="profil-nama" placeholder="Nama Hotel atau Perusahaan Anda" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
+                                     </div>
+                                     <div>
+                                         <label for="profil-telepon" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Nomor Telepon Perusahaan</label>
+                                         <input type="tel" id="profil-telepon" placeholder="Nomor telepon yang bisa dihubungi" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
+                                     </div>
+                                     <div>
+                                         <label for="profil-alamat" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Alamat Perusahaan</label>
+                                         <textarea id="profil-alamat" rows="3" placeholder="Alamat lengkap perusahaan Anda" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]"></textarea>
+                                     </div>
+                                     <div>
+                                         <label for="profil-logo-upload" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Logo Perusahaan</label>
+                                         <input type="file" id="profil-logo-upload" accept="image/*" class="w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:bg-[var(--accent-hover)]">
+                                         <div class="mt-4"><p class="text-sm text-[var(--text-secondary)] mb-2">Preview Logo:</p><img id="profil-logo-preview" src="assets/logo.png" alt="Preview Logo" class="mt-2 rounded-lg max-h-20 bg-white p-2 border border-[var(--border-color)]"></div>
+                                     </div>
+                                 </div>
+                                 <div class="pt-6 flex justify-end"><button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan Profil</button></div>
+                             </form>
+                        </div>
+                        <div id="tab-pajak" class="tab-content py-6 hidden">
                              <form id="formPajak">
                                  <div class="space-y-4">
                                      <div>
                                          <label for="tax-service-percentage" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Persentase Pajak & Pelayanan (%)</label>
                                          <input type="number" id="tax-service-percentage" step="0.1" min="0" class="w-full max-w-xs bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]" required>
                                      </div>
-                                 </div>
-                                 <div class="pt-6 flex justify-end">
-                                     <button type="submit" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center">
-                                         <i data-lucide="save" class="w-4 h-4 mr-2"></i> Simpan
-                                     </button>
-                                 </div>
-                             </form>
-                        </div>
-                        <div id="tab-invoice" class="tab-content py-6 hidden">
-                             <form id="formInvoiceSettings">
-                                 <div class="space-y-4">
                                      <div>
-                                         <label for="invoice-logo-url" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">URL Logo Invoice</label>
-                                         <input type="text" id="invoice-logo-url" placeholder="https://contoh.com/logo.png" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
-                                     </div>
-                                     <div>
-                                         <label for="invoice-payment-notes" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Catatan Pembayaran</label>
+                                         <label for="invoice-payment-notes" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Catatan Pembayaran di Invoice</label>
                                          <textarea id="invoice-payment-notes" rows="4" class="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]" placeholder="Contoh: Bank ABC, No. Rek: 123-456-7890..."></textarea>
                                      </div>
                                  </div>
@@ -463,6 +523,17 @@
                                      </button>
                                  </div>
                              </form>
+                        </div>
+                        <div id="tab-agenda-type" class="tab-content py-6 hidden">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Manajemen Tipe Agenda Meeting</h3>
+                                <button class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-4 rounded-md flex items-center text-sm" onclick="openAgendaTypeModal()">
+                                    <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Tambah Tipe
+                                </button>
+                            </div>
+                            <div id="pengaturan-agenda-table-container" class="overflow-x-auto">
+                                <!-- Agenda type table will be rendered here -->
+                            </div>
                         </div>
                         <div id="tab-role" class="tab-content py-6 hidden">
                             <form id="formRoleSettings">
@@ -479,34 +550,90 @@
                     </div>
                 </div>
 
+                <!-- Manajemen Target Content -->
+                <div id="manajemen-target" class="content-section hidden">
+                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+                        <h3 class="text-lg sm:text-xl font-semibold mb-6">Set Target Penjualan Bulanan</h3>
+                        <form id="targetForm" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label for="target-bulan" class="block text-sm text-[var(--text-secondary)] mb-2">Bulan</label><select id="target-bulan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></select></div>
+                                <div><label for="target-tahun" class="block text-sm text-[var(--text-secondary)] mb-2">Tahun</label><select id="target-tahun" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></select></div>
+                            </div>
+                            <div>
+                                <label for="sales-target-input" class="block text-sm text-[var(--text-secondary)] mb-2">Target Keseluruhan Tim (dalam Juta Rupiah)</label>
+                                <input type="number" id="sales-target-input" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Contoh: 200" required>
+                            </div>
+                            <div class="border-t border-[var(--border-color)] pt-4 mt-4">
+                                <h4 class="text-md font-semibold mb-4">Target Individual Sales</h4>
+                                <div id="sales-target-list" class="space-y-3 max-h-40 overflow-y-auto pr-2">
+                                    <!-- Sales target inputs will be rendered here by JS -->
+                                </div>
+                            </div>
+                            <div class="border-t border-[var(--border-color)] pt-4 mt-4">
+                                <h4 class="text-md font-semibold mb-4">Target per Segmen (dalam Juta Rupiah)</h4>
+                                <div id="segment-target-list" class="space-y-3">
+                                    <!-- Segment target inputs will be rendered here by JS -->
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-4 pt-4"><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan Target</button></div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Pembayaran Content -->
                 <div id="pembayaran" class="content-section hidden">
-                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                            <h3 class="text-lg font-semibold">Manajemen Pembayaran (Piutang)</h3>
-                             <div class="relative w-full sm:w-64">
-                                <input type="text" id="pembayaran-search" placeholder="Cari ID atau pelanggan..." class="w-full pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:ring-[var(--accent)] focus:border-[var(--accent)]">
-                                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]"></i>
+                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg space-y-8">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-4">Ringkasan Piutang</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Total Tagihan (Piutang)</p><p id="pembayaran-total-tagihan" class="text-xl font-bold text-[var(--text-primary)]">Rp 0</p></div>
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Total Sisa Tagihan (Piutang)</p><p id="pembayaran-total-sisa" class="text-xl font-bold text-red-500">Rp 0</p></div>
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Jumlah Transaksi (Piutang)</p><p id="pembayaran-total-transaksi" class="text-xl font-bold text-[var(--text-primary)]">0</p></div>
                             </div>
                         </div>
-                        <div id="pembayaran-table-container" class="overflow-x-auto">
-                            <!-- Payment table will be rendered here -->
+                        <div>
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                                <h3 class="text-lg font-semibold">Rincian Piutang</h3>
+                                <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+                                    <select id="pembayaran-sales-filter" class="pl-4 pr-8 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:ring-[var(--accent)] focus:border-[var(--accent)] text-sm">
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                     <div class="relative w-full sm:w-64">
+                                        <input type="text" id="pembayaran-search" placeholder="Cari ID atau pelanggan..." class="w-full pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:ring-[var(--accent)] focus:border-[var(--accent)]">
+                                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]"></i>
+                                    </div>
+                                    <button id="print-piutang-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center flex-shrink-0 text-sm"><i data-lucide="printer" class="w-4 h-4 mr-2"></i> Cetak Laporan</button>
+                                </div>
+                            </div>
+                            <div id="pembayaran-table-container" class="overflow-x-auto">
+                                <!-- Payment table will be rendered here -->
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Laporan & Invoice Content -->
                 <div id="laporan" class="content-section hidden">
-                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
-                         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                            <h3 class="text-lg font-semibold">Daftar Booking & Transaksi</h3>
-                             <div class="relative w-full sm:w-64">
-                                <input type="text" id="laporan-search" placeholder="Cari ID atau pelanggan..." class="w-full pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:ring-[var(--accent)] focus:border-[var(--accent)]">
-                                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]"></i>
+                    <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg space-y-8">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-4">Ringkasan Semua Transaksi</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Total Pendapatan</p><p id="laporan-total-pendapatan" class="text-xl font-bold text-[var(--text-primary)]">Rp 0</p></div>
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Total Sudah Dibayar</p><p id="laporan-total-dibayar" class="text-xl font-bold text-green-500">Rp 0</p></div>
+                                <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg"><p class="text-sm text-[var(--text-secondary)]">Total Sisa Tagihan</p><p id="laporan-total-sisa" class="text-xl font-bold text-red-500">Rp 0</p></div>
                             </div>
                         </div>
-                        <div id="laporan-table-container" class="overflow-x-auto">
-                            <!-- Reports table will be rendered here -->
+                        <div>
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                                <h3 class="text-lg font-semibold">Rincian Transaksi</h3>
+                                <div class="relative w-full sm:w-64">
+                                    <input type="text" id="laporan-search" placeholder="Cari ID atau pelanggan..." class="w-full pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:ring-[var(--accent)] focus:border-[var(--accent)]">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]"></i>
+                                </div>
+                            </div>
+                            <div id="laporan-table-container" class="overflow-x-auto">
+                                <!-- Reports table will be rendered here -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -514,7 +641,7 @@
                 <div id="laporan-sales" class="content-section hidden">
                     <div class="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
                         <h3 class="text-lg font-semibold mb-4">Laporan Pencapaian Sales</h3>
-                        <div class="bg-[var(--bg-tertiary)]/50 p-4 rounded-lg flex flex-col md:flex-row items-center gap-4 mb-6">
+                        <div class="bg-[var(--bg-tertiary)]/50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-end gap-4 mb-6">
                             <div class="flex-1 w-full">
                                 <label for="report-start-date" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Tanggal Mulai</label>
                                 <input type="date" id="report-start-date" class="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
@@ -523,7 +650,11 @@
                                 <label for="report-end-date" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Tanggal Selesai</label>
                                 <input type="date" id="report-end-date" class="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]">
                             </div>
-                            <div class="pt-7">
+                            <div class="flex-1 w-full">
+                                <label for="report-sales-filter" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Filter Sales</label>
+                                <select id="report-sales-filter" class="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md px-3 py-2 text-[var(--text-primary)]"></select>
+                            </div>
+                            <div>
                                 <button id="generate-sales-report-btn" class="w-full md:w-auto bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-2 px-6 rounded-md flex items-center justify-center">
                                     <i data-lucide="play" class="w-4 h-4 mr-2"></i> Buat Laporan
                                 </button>
@@ -555,6 +686,14 @@
                             </div>
                         </div>
 
+                        <!-- Agenda Report Container -->
+                        <div id="sales-agenda-report-section" class="mt-8 hidden">
+                             <h4 class="text-lg font-semibold mb-4 flex items-center"><i data-lucide="calendar-check" class="w-5 h-5 mr-2 text-blue-400"></i> Laporan Detail Agenda Meeting</h4>
+                             <div id="sales-agenda-report-container" class="overflow-x-auto">
+                                <!-- Agenda report table will be rendered here -->
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -565,7 +704,7 @@
     <!-- (All modal HTML remains the same) -->
     <div id="pelangganModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('pelangganModal')">
         <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()">
-            <h3 id="pelangganModalTitle" class="text-xl font-semibold mb-6">Tambah Pelanggan Baru</h3>
+            <h3 id="pelangganModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Pelanggan Baru</h3>
             <form id="formTambahPelanggan" class="space-y-4">
                 <input type="hidden" id="pelanggan-id">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -586,35 +725,9 @@
         </div>
     </div>
     
-    <div id="targetModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('targetModal')">
-        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()">
-            <h3 class="text-xl font-semibold mb-6">Set Target Penjualan Bulanan</h3>
-            <form id="targetForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="target-bulan" class="block text-sm text-[var(--text-secondary)] mb-2">Bulan</label>
-                        <select id="target-bulan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></select>
-                    </div>
-                    <div>
-                        <label for="target-tahun" class="block text-sm text-[var(--text-secondary)] mb-2">Tahun</label>
-                        <select id="target-tahun" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></select>
-                    </div>
-                </div>
-                <div>
-                    <label for="sales-target-input" class="block text-sm text-[var(--text-secondary)] mb-2">Target Penjualan (dalam Juta Rupiah)</label>
-                    <input type="number" id="sales-target-input" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Contoh: 200" required>
-                </div>
-                <div class="flex justify-end space-x-4 pt-6">
-                    <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('targetModal')">Batal</button>
-                    <button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan Target</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div id="kamarModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('kamarModal')">
         <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
-            <h3 id="kamarModalTitle" class="text-xl font-semibold mb-6">Tambah Tipe Kamar</h3>
+            <h3 id="kamarModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Tipe Kamar</h3>
             <form id="formKamar" class="space-y-4">
                 <input type="hidden" id="kamar-id">
                 <div>
@@ -651,24 +764,56 @@
         </div>
     </div>
 
-    <div id="meetingRoomModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('meetingRoomModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="meetingRoomModalTitle" class="text-xl font-semibold mb-6">Tambah Ruang Meeting</h3><form id="formMeetingRoom" class="space-y-4"><input type="hidden" id="meeting-room-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Ruang Meeting</label><input type="text" id="meeting-room-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Harga Sewa</label><input type="number" id="meeting-room-harga" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('meetingRoomModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
+    <div id="meetingRoomModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('meetingRoomModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="meetingRoomModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Ruang Meeting</h3><form id="formMeetingRoom" class="space-y-4"><input type="hidden" id="meeting-room-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Ruang Meeting</label><input type="text" id="meeting-room-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Harga Sewa</label><input type="number" id="meeting-room-harga" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('meetingRoomModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
     
-    <div id="paketMeetingModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('paketMeetingModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="paketMeetingModalTitle" class="text-xl font-semibold mb-6">Tambah Paket Meeting</h3><form id="formPaketMeeting" class="space-y-4"><input type="hidden" id="paket-meeting-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Paket</label><input type="text" id="paket-meeting-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Harga per Pax</label><input type="number" id="paket-meeting-harga" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('paketMeetingModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
+    <div id="paketMeetingModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('paketMeetingModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="paketMeetingModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Paket Meeting</h3><form id="formPaketMeeting" class="space-y-4"><input type="hidden" id="paket-meeting-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Paket</label><input type="text" id="paket-meeting-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Harga per Pax</label><input type="number" id="paket-meeting-harga" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('paketMeetingModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
     
+    <!-- Agenda Type Modal -->
+    <div id="agendaTypeModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('agendaTypeModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()">
+            <h3 id="agendaTypeModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Tipe Agenda</h3>
+            <form id="formAgendaType" class="space-y-4">
+                <input type="hidden" id="agenda-type-id">
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Tipe Agenda</label><input type="text" id="agenda-type-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
+                <div class="flex justify-end space-x-4 pt-6">
+                    <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('agendaTypeModal')">Batal</button>
+                    <button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Agenda Modal -->
-    <div id="agendaModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('agendaModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()"><h3 id="agendaModalTitle" class="text-xl font-semibold mb-6">Tambah Agenda Baru</h3><form id="formAgenda" class="space-y-4"><input type="hidden" id="agenda-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Judul Meeting</label><input type="text" id="agenda-judul" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Pelanggan</label><select id="agenda-pelanggan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih --</option></select></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tipe Agenda</label><select id="agenda-tipe" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="telemarketing">Telemarketing</option><option value="visit">Visit Sales Call</option></select></div></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tanggal</label><input type="date" id="agenda-tanggal" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Mulai</label><input type="time" id="agenda-jam-mulai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Selesai</label><input type="time" id="agenda-jam-selesai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Lokasi</label><div class="flex items-center space-x-2"><input type="text" id="agenda-lokasi" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Koordinat GPS atau nama tempat"><button type="button" id="get-gps-location" class="p-2 bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)]"><i data-lucide="map-pin" class="w-5 h-5 text-white"></i></button></div></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan</label><textarea id="agenda-catatan" rows="2" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></textarea></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('agendaModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
+    <div id="agendaModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('agendaModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
+            <h3 id="agendaModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah Agenda Baru</h3>
+            <form id="formAgenda" class="space-y-4">
+                <input type="hidden" id="agenda-id">
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Judul Meeting</label><input type="text" id="agenda-judul" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Pelanggan</label><select id="agenda-pelanggan" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih --</option></select></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tipe Agenda</label><select id="agenda-tipe" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="">-- Pilih Tipe --</option></select></div></div>
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Tanggal</label><input type="date" id="agenda-tanggal" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Mulai</label><input type="time" id="agenda-jam-mulai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Jam Selesai</label><input type="time" id="agenda-jam-selesai" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div></div>
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Lokasi</label><div class="flex items-center space-x-2"><input type="text" id="agenda-lokasi" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Koordinat GPS atau nama tempat"><button type="button" id="get-gps-location" class="p-2 bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)]"><i data-lucide="map-pin" class="w-5 h-5 text-white"></i></button></div></div>
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan</label><textarea id="agenda-catatan" rows="2" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></textarea></div>
+                <div><label class="block text-sm text-[var(--text-secondary)] mb-2">Upload Foto (Opsional)</label><input type="file" id="agenda-foto-upload" accept="image/*" class="w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:bg-[var(--accent-hover)]"><img id="agenda-foto-preview" src="#" alt="Preview Foto Agenda" class="mt-4 rounded-lg max-h-40 hidden"></div>
+                <div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('agendaModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div>
+            </form>
+        </div>
+    </div>
 
     <!-- User Modal -->
-    <div id="userModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('userModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="userModalTitle" class="text-xl font-semibold mb-6">Tambah User Baru</h3><form id="formUser" class="space-y-4"><input type="hidden" id="user-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Lengkap</label><input type="text" id="user-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Email</label><input type="email" id="user-email" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Password</label><input type="password" id="user-password" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Kosongkan jika tidak diubah"></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Role</label><select id="user-role" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="Sales">Sales</option><option value="Manager">Manager</option><option value="Admin">Admin</option></select></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('userModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
+    <div id="userModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('userModal')"><div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-md transform scale-95" onclick="event.stopPropagation()"><h3 id="userModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Tambah User Baru</h3><form id="formUser" class="space-y-4"><input type="hidden" id="user-id"><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Nama Lengkap</label><input type="text" id="user-nama" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Email</label><input type="email" id="user-email" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Password</label><input type="password" id="user-password" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Kosongkan jika tidak diubah"></div><div><label class="block text-sm text-[var(--text-secondary)] mb-2">Role</label><select id="user-role" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" required><option value="Sales">Sales</option><option value="Accounting">Accounting</option><option value="Manager">Manager</option><option value="Admin">Admin</option></select></div><div class="flex justify-end space-x-4 pt-6"><button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('userModal')">Batal</button><button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan</button></div></form></div></div>
 
     <!-- Payment Modal -->
+
     <div id="paymentModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('paymentModal')">
         <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
-            <h3 class="text-xl font-semibold mb-2">Input Pembayaran</h3>
+            <h3 class="text-lg sm:text-xl font-semibold mb-2">Input Pembayaran</h3>
             <p class="text-sm text-[var(--text-secondary)] mb-6">Untuk Booking ID: <span id="payment-booking-id" class="font-bold"></span></p>
-            <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+            <div class="grid grid-cols-4 gap-4 mb-6 text-center">
                 <div><p class="text-sm text-[var(--text-secondary)]">Total Tagihan</p><p id="payment-total-tagihan" class="text-lg font-bold"></p></div>
-                <div><p class="text-sm text-[var(--text-secondary)]">Sudah Dibayar</p><p id="payment-sudah-dibayar" class="text-lg font-bold text-green-500"></p></div>
+                <div><p class="text-sm text-[var(--text-secondary)]">Dibayar (Verified)</p><p id="payment-sudah-dibayar" class="text-lg font-bold text-green-500"></p></div>
+                <div><p class="text-sm text-[var(--text-secondary)]">Menunggu Verifikasi</p><p id="payment-menunggu-verifikasi" class="text-lg font-bold text-yellow-500"></p></div>
                 <div><p class="text-sm text-[var(--text-secondary)]">Sisa Tagihan</p><p id="payment-sisa-tagihan" class="text-lg font-bold text-red-500"></p></div>
             </div>
             <form id="formPembayaran" class="space-y-4">
@@ -705,9 +850,38 @@
                     <label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan (Opsional)</label>
                     <textarea id="payment-catatan" rows="2" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2"></textarea>
                 </div>
+                <div>
+                    <label class="block text-sm text-[var(--text-secondary)] mb-2">Upload Bukti Transfer (Opsional)</label>
+                    <input type="file" id="payment-proof-upload" accept="image/*" class="w-full text-sm text-[var(--text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent)] file:text-white hover:file:bg-[var(--accent-hover)]">
+                    <img id="payment-proof-preview" src="#" alt="Preview Bukti Transfer" class="mt-4 rounded-lg max-h-40 hidden">
+                </div>
                 <div class="flex justify-end space-x-4 pt-6">
                     <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('paymentModal')">Batal</button>
                     <button type="submit" class="px-6 py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-semibold">Simpan Pembayaran</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div id="verificationModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[60] hidden items-center justify-center opacity-0" onclick="closeModal('verificationModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
+            <h3 id="verificationModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Verifikasi Pembayaran</h3>
+            <form id="formVerifikasi" class="space-y-4">
+                <input type="hidden" id="verification-booking-id">
+                <div>
+                    <p class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Pilih pembayaran yang akan diverifikasi:</p>
+                    <div id="verification-payment-list" class="space-y-2 p-3 bg-[var(--bg-tertiary)] rounded-md max-h-40 overflow-y-auto">
+                        <!-- Unverified payments will be listed here -->
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-[var(--text-secondary)] mb-2">Catatan Verifikasi</label>
+                    <textarea id="verification-note" rows="3" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Contoh: Dana sudah diterima di rekening Bank ABC." required></textarea>
+                </div>
+                <div class="flex justify-end space-x-4 pt-6">
+                    <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('verificationModal')">Batal</button>
+                    <button type="submit" class="px-6 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white font-semibold">Verifikasi Terpilih</button>
                 </div>
             </form>
         </div>
@@ -717,8 +891,8 @@
     <div id="confirmModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[60] hidden items-center justify-center opacity-0" onclick="closeModal('confirmModal')">
         <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-sm transform scale-95" onclick="event.stopPropagation()">
             <div class="text-center">
-                <i id="confirm-icon" data-lucide="alert-triangle" class="w-16 h-16 mx-auto text-yellow-400"></i>
-                <h3 id="confirm-title" class="text-xl font-semibold mt-4 mb-2">Konfirmasi Aksi</h3>
+                <i id="confirm-icon" data-lucide="alert-triangle" class="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-yellow-400"></i>
+                <h3 id="confirm-title" class="text-lg sm:text-xl font-semibold mt-4 mb-2">Konfirmasi Aksi</h3>
                 <p id="confirm-message" class="text-[var(--text-secondary)] mb-6">Apakah Anda yakin ingin melanjutkan?</p>
             </div>
             <div class="flex justify-center space-x-4">
@@ -728,10 +902,42 @@
         </div>
     </div>
 
+    <!-- Price History Modal -->
+    <div id="priceHistoryModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[60] hidden items-center justify-center opacity-0" onclick="closeModal('priceHistoryModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-2xl transform scale-95" onclick="event.stopPropagation()">
+            <h3 id="priceHistoryModalTitle" class="text-lg sm:text-xl font-semibold mb-6">Riwayat Perubahan Harga</h3>
+            <div id="priceHistoryContent" class="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                <!-- History items will be rendered here -->
+            </div>
+            <div class="flex justify-end pt-6 mt-4 border-t border-[var(--border-color)]">
+                <button type="button" class="px-6 py-2 rounded-md text-[var(--text-primary)] bg-[var(--bg-tertiary)] hover:bg-[var(--border-color)] font-semibold" onclick="closeModal('priceHistoryModal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancellation Modal -->
+    <div id="cancellationModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-[60] hidden items-center justify-center opacity-0" onclick="closeModal('cancellationModal')">
+        <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
+            <h3 class="text-lg sm:text-xl font-semibold mb-2">Batalkan Booking</h3>
+            <p class="text-sm text-[var(--text-secondary)] mb-6">Untuk Booking ID: <span id="cancel-booking-id" class="font-bold"></span></p>
+            <form id="formCancellation" class="space-y-4">
+                <input type="hidden" id="cancel-booking-id-input">
+                <div>
+                    <label for="cancellation-reason" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Alasan Pembatalan</label>
+                    <textarea id="cancellation-reason" rows="4" class="w-full bg-[var(--bg-tertiary)] border-[var(--border-color)] rounded-md p-2" placeholder="Contoh: Pelanggan membatalkan karena perubahan jadwal." required></textarea>
+                </div>
+                <div class="flex justify-end space-x-4 pt-6">
+                    <button type="button" class="px-4 py-2 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onclick="closeModal('cancellationModal')">Tutup</button>
+                    <button type="submit" class="px-6 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-semibold">Konfirmasi Pembatalan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Gemini AI Modal & Event Detail Modal -->
     <div id="geminiModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center opacity-0" onclick="closeModal('geminiModal')">
         <div class="modal-content bg-[var(--bg-secondary)] rounded-lg shadow-xl p-8 w-full max-w-lg transform scale-95" onclick="event.stopPropagation()">
-            <h3 id="geminiModalTitle" class="text-xl font-semibold mb-6 flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i> Asisten AI</h3>
+            <h3 id="geminiModalTitle" class="text-lg sm:text-xl font-semibold mb-6 flex items-center"><i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i> Asisten AI</h3>
             <div id="geminiModalContent" class="space-y-4">
                 <!-- Content for Gemini features will be injected here -->
             </div>
@@ -745,5 +951,3 @@
     <script src="app.js" defer></script>
 </body>
 </html>
-
-
